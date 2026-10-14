@@ -309,6 +309,16 @@ body.dark .imageActions button{background:#2c2837;border-color:#40374a}
 #notes.list .noteThumb{grid-column:2;grid-row:1/span 2;width:46px;height:46px}
 #notes.list .notefoot{grid-column:3}
 #notes.grid .noteThumb{order:-1;width:calc(100% + 26px);height:110px;margin:-13px -13px 10px;border-radius:20px 20px 0 0}
+
+/* ---- rich note body with inline images ---- */
+.richBody{flex:0 0 auto;height:auto;max-height:none;overflow:visible;min-height:180px;overflow-wrap:anywhere;white-space:pre-wrap;cursor:text}
+.richBody:empty::before{content:attr(data-placeholder);color:var(--muted);pointer-events:none}
+.richBody div{min-height:1.6em}
+.inlineImg{position:relative;margin:8px 0;border-radius:14px;overflow:hidden;background:var(--lav);user-select:none;max-width:100%}
+.inlineImg img{display:block;width:100%;height:auto;max-height:60vh;object-fit:contain;cursor:zoom-in}
+.imgTools{position:absolute;top:6px;right:6px;display:flex;gap:6px}
+.imgTools button{width:34px;height:34px;border:0;border-radius:50%;background:#000000a0;color:#fff;font-size:17px;line-height:1;font-weight:800}
+body.dark .richBody{background:#2c2837;border-color:#40374a;color:var(--ink)}
 </style>
 </head>
 <body><main class="app">
@@ -486,8 +496,8 @@ body.dark .imageActions button{background:#2c2837;border-color:#40374a}
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="แก้ไขบันทึก"><section class="editor">
 <div class="edithead"><button class="close" id="close" aria-label="ปิด">‹</button><h2 id="editorHeading">โน้ตใหม่</h2><button class="textbtn" id="save" data-i18n="save">บันทึก</button></div>
 <input class="fieldtitle" id="noteTitle" placeholder="หัวข้อ" maxlength="120" aria-label="หัวข้อโน้ต" data-i18n-placeholder="titlePlaceholder">
-<textarea class="fieldbody" id="noteBody" placeholder="เขียนสิ่งที่คุณคิดไว้ที่นี่..." aria-label="เนื้อหาโน้ต" data-i18n-placeholder="bodyPlaceholder"></textarea>
-<div class="noteImages" id="noteImages"></div>
+<div class="fieldbody richBody" id="noteRich" contenteditable="true" role="textbox" aria-multiline="true" aria-label="เนื้อหาโน้ต"></div>
+<textarea class="fieldbody" hidden id="noteBody" placeholder="เขียนสิ่งที่คุณคิดไว้ที่นี่..." aria-label="เนื้อหาโน้ต" data-i18n-placeholder="bodyPlaceholder"></textarea>
 <div class="imageActions"><button type="button" id="addImage">🖼️ <span data-nav="addImage">เพิ่มรูป</span></button><button type="button" id="takePhoto">📷 <span data-nav="takePhoto">ถ่ายรูป</span></button><span id="imageStatus" role="status"></span></div>
 <input id="imagePick" type="file" accept="image/*" multiple hidden><input id="cameraPick" type="file" accept="image/*" capture="environment" hidden>
 <div class="label" data-i18n="noteColor">สีของโน้ต</div><div class="colors" id="colors"><button class="swatch selected" style="background:var(--lav)" data-color="0" aria-label="สีม่วง"></button><button class="swatch" style="background:var(--mint)" data-color="1" aria-label="สีเขียว"></button><button class="swatch" style="background:var(--peach)" data-color="2" aria-label="สีพีช"></button><button class="swatch" style="background:var(--yellow)" data-color="3" aria-label="สีเหลือง"></button><button class="swatch" style="background:var(--pink)" data-color="4" aria-label="สีชมพู"></button></div>
@@ -796,11 +806,11 @@ function render(){
   if(filter==='trash'&&!n.deletedAt)return false;
   if(filter!=='trash'&&n.deletedAt)return false;
   if(cat&&n.category!==cat)return false;
-  return (`${n.title} ${n.body} ${n.category||''}`).toLocaleLowerCase().includes(q);
+  return (`${n.title} ${stripImageTokens(n.body)} ${n.category||''}`).toLocaleLowerCase().includes(q);
  }).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||noteSorters[sortBy](a,b));
  updateFilterTag();
  $('count').textContent=`${list.length} ${language==='th'?'บันทึก':'notes'}`;
- $('notes').innerHTML=list.length?list.map(n=>`<article class="note ${n.deletedAt?'deleted':''}" style="--c:${colors[n.colorIndex]||colors[0]};background:var(--c)" data-open="${esc(n.id)}" tabindex="0" role="button">${n.images?.length?`<img class="noteThumb" src="${esc(n.images[0].src)}" alt="" loading="lazy">`:''}<div class="notehead"><div class="notetitle">${esc(n.title||tr('noTitle'))}</div>${n.pinned?'<span>📌</span>':''}${n.favorite?'<span>⭐</span>':''}</div><div class="preview">${esc(n.body||tr('noContent'))}</div><div class="noteMeta">${n.category?`<span class="metaPill">▣ ${esc(n.category)}</span>`:''}${n.checklist?.length?`<span class="metaPill">☑ ${n.checklist.filter(x=>x.done).length}/${n.checklist.length}</span>`:''}${n.images?.length>1?`<span class="metaPill">🖼️ ${n.images.length}</span>`:''}${n.attachments?.length?`<span class="metaPill">📎 ${n.attachments.length}</span>`:''}${n.reminderAt?`<span class="metaPill">⏰ ${esc(new Date(n.reminderAt).toLocaleString())}</span>`:''}</div><div class="notefoot"><time>${dateLabel(n.updatedAt)}</time>${n.deletedAt?`<button class="iconbtn" data-restore="${esc(n.id)}" aria-label="กู้คืน">↶</button><button class="iconbtn" data-purge="${esc(n.id)}" aria-label="ลบถาวร">×</button>`:`<button class="iconbtn" data-pin="${esc(n.id)}" aria-label="ปักหมุด">${n.pinned?'📌':'📍'}</button><button class="iconbtn" data-delete="${esc(n.id)}" aria-label="ย้ายลงถังขยะ">⌫</button>`}</div></article>`).join(''):`<div class="empty"><div style="font-size:45px">📝</div><div>${q?tr('notFound'):filter==='trash'?'ถังขยะว่าง':tr('emptyTitle')}</div><small>${q?tr('trySearch'):tr('emptyHint')}</small></div>`;
+ $('notes').innerHTML=list.length?list.map(n=>`<article class="note ${n.deletedAt?'deleted':''}" style="--c:${colors[n.colorIndex]||colors[0]};background:var(--c)" data-open="${esc(n.id)}" tabindex="0" role="button">${n.images?.length?`<img class="noteThumb" src="${esc(n.images[0].src)}" alt="" loading="lazy">`:''}<div class="notehead"><div class="notetitle">${esc(n.title||tr('noTitle'))}</div>${n.pinned?'<span>📌</span>':''}${n.favorite?'<span>⭐</span>':''}</div><div class="preview">${esc(stripImageTokens(n.body)||tr('noContent'))}</div><div class="noteMeta">${n.category?`<span class="metaPill">▣ ${esc(n.category)}</span>`:''}${n.checklist?.length?`<span class="metaPill">☑ ${n.checklist.filter(x=>x.done).length}/${n.checklist.length}</span>`:''}${n.images?.length>1?`<span class="metaPill">🖼️ ${n.images.length}</span>`:''}${n.attachments?.length?`<span class="metaPill">📎 ${n.attachments.length}</span>`:''}${n.reminderAt?`<span class="metaPill">⏰ ${esc(new Date(n.reminderAt).toLocaleString())}</span>`:''}</div><div class="notefoot"><time>${dateLabel(n.updatedAt)}</time>${n.deletedAt?`<button class="iconbtn" data-restore="${esc(n.id)}" aria-label="กู้คืน">↶</button><button class="iconbtn" data-purge="${esc(n.id)}" aria-label="ลบถาวร">×</button>`:`<button class="iconbtn" data-pin="${esc(n.id)}" aria-label="ปักหมุด">${n.pinned?'📌':'📍'}</button><button class="iconbtn" data-delete="${esc(n.id)}" aria-label="ย้ายลงถังขยะ">⌫</button>`}</div></article>`).join(''):`<div class="empty"><div style="font-size:45px">📝</div><div>${q?tr('notFound'):filter==='trash'?'ถังขยะว่าง':tr('emptyTitle')}</div><small>${q?tr('trySearch'):tr('emptyHint')}</small></div>`;
 }
 function watchNotes(){
  if(unsubscribeNotes)unsubscribeNotes();
@@ -826,10 +836,10 @@ async function uploadAttachments(noteId){
 }
 async function saveNote(){
  const title=$('noteTitle').value.trim(),body=$('noteBody').value.trim();
- if(!title&&!body&&!checkItems.length&&!noteImages.length){toast(tr('enterText'));return}
+ if(!title&&!body&&!checkItems.length){toast(tr('enterText'));return}
  const id=editingId||crypto.randomUUID(),old=notes.find(n=>n.id===id);
  const reminder=$('noteReminder').value?new Date($('noteReminder').value).toISOString():'';
- const data={id,title,body,colorIndex:selectedColor,pinned:$('notePinned').checked,category:$('noteCategory').value,mood:$('noteMood').value||'',stickers:selectedStickers,favorite:$('noteFavorite').checked,checklist:checkItems,reminderAt:reminder,attachments:existingAttachments,images:noteImages,drawingData:drawingData||old?.drawingData||'',deletedAt:null,locked:!!old?.locked,createdAt:old?.createdAt||Date.now(),updatedAt:Date.now()};
+ const data={id,title,body,colorIndex:selectedColor,pinned:$('notePinned').checked,category:$('noteCategory').value,mood:$('noteMood').value||'',stickers:selectedStickers,favorite:$('noteFavorite').checked,checklist:checkItems,reminderAt:reminder,attachments:existingAttachments,images:usedNoteImages(),drawingData:drawingData||old?.drawingData||'',deletedAt:null,locked:!!old?.locked,createdAt:old?.createdAt||Date.now(),updatedAt:Date.now()};
  if(!currentUser){const next=[data,...notes.filter(n=>n.id!==id)];if(!persistLocalNotes(next)){toast(nt('storageFull'));return}notes=next;render();closeEditor();toast('บันทึกในอุปกรณ์นี้แล้ว ✓');return}
  const hasNewFiles=!!$('noteFiles').files?.length;
  if(navigator.onLine||!hasNewFiles){try{data.attachments=await uploadAttachments(id)}catch(e){toast(driveText('uploadFailed')+': '+e.message);return}}
@@ -844,19 +854,19 @@ function drawAttachments(){
  $('attachmentList').innerHTML=existingAttachments.map((a,i)=>`<span>📎 <a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.name)}</a> <button type="button" data-attachremove="${i}">×</button></span>`).join('');
 }
 function openEditor(n=null){
- editingId=n?.id||null;selectedColor=n?.colorIndex||0;existingAttachments=[...(n?.attachments||[])];
+ editingId=n?.id||null;noteImages=[...(n?.images||[])].map(im=>({...im}));selectedColor=n?.colorIndex||0;existingAttachments=[...(n?.attachments||[])];
  $('editorHeading').textContent=n?tr('editNote'):tr('newNote');$('noteTitle').value=n?.title||'';$('noteBody').value=n?.body||'';$('notePinned').checked=!!n?.pinned;
  $('noteCategory').value=n?.category||'';$('noteMood').value=n?.mood||'';$('noteFavorite').checked=!!n?.favorite;selectedStickers=[...(n?.stickers||[])];drawingData=n?.drawingData||'';$('noteReminder').value=safeDate(n?.reminderAt);$('noteFiles').value='';$('aiResult').textContent='';
- noteImages=[...(n?.images||[])];drawNoteImages();$('imageStatus').textContent='';drawChecklist(n?.checklist||[]);drawAttachments();drawStickerSelection();restoreDrawing();$('delete').hidden=!n;
+ drawNoteImages();$('imageStatus').textContent='';drawChecklist(n?.checklist||[]);drawAttachments();drawStickerSelection();restoreDrawing();$('delete').hidden=!n;
  document.querySelectorAll('.swatch').forEach(b=>b.classList.toggle('selected',Number(b.dataset.color)===selectedColor));
- $('overlay').classList.add('show');document.body.style.overflow='hidden';setTimeout(()=>$('noteTitle').focus(),100)
+ $('overlay').classList.add('show');document.body.style.overflow='hidden';savedRange=null;setTimeout(()=>$('noteTitle').focus(),100)
 }
 function closeEditor(){$('overlay').classList.remove('show');document.body.style.overflow='';editingId=null}
 function checkReminders(){
  if(!('Notification'in window)||Notification.permission!=='granted')return;
  const now=Date.now();
  notes.filter(n=>n.reminderAt&&!n.deletedAt&&!n.reminderSentAt&&new Date(n.reminderAt).getTime()<=now).forEach(async n=>{
-  new Notification(n.title||'Note reminder',{body:n.body||'ถึงเวลาเปิดดูโน้ตของคุณ'});
+  new Notification(n.title||'Note reminder',{body:stripImageTokens(n.body)||'ถึงเวลาเปิดดูโน้ตของคุณ'});
   if(currentUser)setDoc(doc(noteCollection(),n.id),{reminderSentAt:new Date().toISOString(),updatedAt:serverTimestamp()},{merge:true}).catch(()=>{})
  });
 }
@@ -922,9 +932,14 @@ $('filterTag').addEventListener('click',()=>{filter='all';favoriteOnly=false;$('
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.sheetOverlay.show').forEach(o=>closeSheet(o.id))});
 applyViewMode();applyNavLanguage();
 
-// ---- Images inside notes: resized in the browser and stored with the note ----
+// ---- Images inside the note text ----
+// The body text stays plain: each image sits on its own line as [[img:id]],
+// and the editor shows those lines as pictures that can be moved up/down.
 // A Firestore document is capped at 1 MiB, so keep each note's images under budget.
 const IMAGE_BUDGET=780000;
+const IMG_LINE=/^\[\[img:([\w-]+)\]\]$/;
+function stripImageTokens(t,repl=''){t=String(t||'');return (repl?t.replace(/\[\[img:[\w-]+\]\]/g,repl):t.replace(/^\[\[img:[\w-]+\]\]$\n?/gm,'')).trim()}
+function bodyToHtml(n){const byId=new Map((n.images||[]).map(im=>[im.id,im]));return String(n.body||'').split('\n').map(l=>{const m=l.match(IMG_LINE);return m&&byId.has(m[1])?`<img src="${esc(byId.get(m[1]).src)}" style="max-width:100%;border-radius:8px;margin:6px 0;display:block">`:esc(l)}).join('\n')}
 function persistLocalNotes(list){
  const json=JSON.stringify(list);
  try{localStorage.setItem('meow-local-notes',json);return localStorage.getItem('meow-local-notes').length===json.length}
@@ -939,9 +954,58 @@ function encodeImage(img,maxEdge,quality){
  const w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
  const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');
  ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
- return {src:c.toDataURL('image/jpeg',quality),w,h};
+ return {id:Math.random().toString(36).slice(2,10),src:c.toDataURL('image/jpeg',quality),w,h};
 }
-const imagesSize=()=>noteImages.reduce((t,im)=>t+im.src.length,0)+(drawingData||'').length;
+const rich=$('noteRich'),bodyEl=$('noteBody');
+const taValue=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value');
+let syncingRich=false,savedRange=null;
+// Code elsewhere (templates, AI) writes noteBody.value; mirror those writes into the editor.
+Object.defineProperty(bodyEl,'value',{configurable:true,get(){return taValue.get.call(bodyEl)},set(v){taValue.set.call(bodyEl,v);if(!syncingRich)renderRich()}});
+function figureHtml(im){return `<figure class="inlineImg" contenteditable="false" data-img="${esc(im.id)}"><img src="${esc(im.src)}" alt=""><span class="imgTools"><button type="button" data-imgup aria-label="ย้ายขึ้น">↑</button><button type="button" data-imgdown aria-label="ย้ายลง">↓</button><button type="button" data-imgremove aria-label="ลบรูป">×</button></span></figure>`}
+function renderRich(){
+ noteImages.forEach(im=>{if(!im.id)im.id=Math.random().toString(36).slice(2,10)});
+ const text=taValue.get.call(bodyEl),byId=new Map(noteImages.map(im=>[im.id,im])),used=new Set();
+ let html='';
+ if(text)for(const line of text.split('\n')){const m=line.match(IMG_LINE);if(m&&byId.has(m[1])&&!used.has(m[1])){used.add(m[1]);html+=figureHtml(byId.get(m[1]))}else html+=`<div>${line?esc(line):'<br>'}</div>`}
+ // Images saved before inline placement existed go at the end.
+ for(const im of noteImages)if(!used.has(im.id))html+=figureHtml(im)+'<div><br></div>';
+ rich.innerHTML=html;rich.dataset.placeholder=bodyEl.placeholder||'';
+ if(noteImages.some(im=>!used.has(im.id)))syncBodyFromRich();
+}
+function inlineText(n){
+ if(n.nodeType===3)return n.data;if(n.nodeName==='BR')return '\n';
+ if(n.nodeName==='FIGURE')return n.dataset.img?`\n[[img:${n.dataset.img}]]\n`:'';
+ let t='';for(const c of n.childNodes)t+=inlineText(c);
+ if(/^(DIV|P|LI|H[1-6])$/.test(n.nodeName)&&t&&!t.endsWith('\n'))t+='\n';return t;
+}
+function serializeRich(){
+ const lines=[];let cur=null;const flush=()=>{if(cur!==null){lines.push(cur);cur=null}};
+ for(const n of rich.childNodes){
+  if(n.nodeName==='FIGURE'){flush();if(n.dataset.img)lines.push(`[[img:${n.dataset.img}]]`);continue}
+  if(n.nodeType===3){cur=(cur??'')+n.data;continue}
+  if(n.nodeName==='BR'){cur=cur??'';flush();continue}
+  flush();let t=inlineText(n);if(t.endsWith('\n'))t=t.slice(0,-1);lines.push(...t.split('\n'));
+ }
+ flush();return lines.join('\n').replace(/\s+$/,'');
+}
+function syncBodyFromRich(){syncingRich=true;bodyEl.value=serializeRich();syncingRich=false}
+function usedNoteImages(){const body=taValue.get.call(bodyEl);return noteImages.filter(im=>body.includes(`[[img:${im.id}]]`))}
+function drawNoteImages(){renderRich()}
+const imagesSize=()=>usedNoteImages().reduce((t,im)=>t+im.src.length,0)+(drawingData||'').length;
+function placeCaretIn(el,move){const r=document.createRange();r.setStart(el,0);r.collapse(true);savedRange=r;if(move){const sel=getSelection();sel.removeAllRanges();sel.addRange(r)}}
+function insertFigure(im){
+ const holder=document.createElement('div');holder.innerHTML=figureHtml(im);const fig=holder.firstChild;
+ let block=null;const hadCaret=!!(savedRange&&rich.contains(savedRange.startContainer));
+ if(hadCaret){
+  block=savedRange.startContainer;
+  if(block===rich)block=rich.childNodes[savedRange.startOffset-1]||null;
+  else while(block&&block.parentNode!==rich)block=block.parentNode;
+ }
+ if(block)block.after(fig);else rich.append(fig);
+ let next=fig.nextSibling;
+ if(!next||next.nodeName!=='DIV'||next.textContent){next=document.createElement('div');next.innerHTML='<br>';fig.after(next)}
+ placeCaretIn(next,hadCaret);syncBodyFromRich();
+}
 async function addImageFiles(files){
  files=[...files].filter(f=>f.type.startsWith('image/'));if(!files.length)return;
  $('imageStatus').textContent=nt('imageWorking');
@@ -949,28 +1013,38 @@ async function addImageFiles(files){
  const steps=currentUser?[[1280,.75],[1024,.68],[800,.6],[640,.55]]:[[900,.66],[720,.6],[560,.55]];
  for(const file of files){
   let img;try{img=await loadImageFile(file)}catch{toast(nt('imageFailed'));continue}
-  let added=false;
-  for(const [edge,q] of steps){const enc=encodeImage(img,edge,q);if(imagesSize()+enc.src.length<=IMAGE_BUDGET){noteImages.push(enc);added=true;break}}
+  let added=null;
+  for(const [edge,q] of steps){const enc=encodeImage(img,edge,q);if(imagesSize()+enc.src.length<=IMAGE_BUDGET){added=enc;break}}
   if(!added){toast(nt('imageTooBig'));break}
-  drawNoteImages();
+  noteImages.push(added);insertFigure(added);
  }
  $('imageStatus').textContent='';
 }
-function drawNoteImages(){
- $('noteImages').innerHTML=noteImages.map((im,i)=>`<figure><img src="${esc(im.src)}" alt="" data-imgview="${i}"><button type="button" data-imgremove="${i}" aria-label="ลบรูป">×</button></figure>`).join('');
-}
 function openImageViewer(src){$('imgViewerImg').src=src;$('imgViewer').classList.add('show')}
+document.addEventListener('selectionchange',()=>{const sel=getSelection();if(sel.rangeCount&&rich.contains(sel.anchorNode))savedRange=sel.getRangeAt(0).cloneRange()});
+rich.addEventListener('input',syncBodyFromRich);
+// Keep the caret where it was when the image buttons are pressed.
+rich.addEventListener('mousedown',e=>{if(e.target.closest('.imgTools'))e.preventDefault()});
+rich.addEventListener('click',e=>{
+ const fig=e.target.closest('figure.inlineImg');if(!fig)return;
+ const sib=(n,dir)=>{n=n[dir];while(n&&n.nodeType===3&&!n.data.trim())n=n[dir];return n};
+ if(e.target.closest('[data-imgremove]')){const next=fig.nextSibling;fig.remove();if(next&&next.nodeName==='DIV'&&!next.textContent&&next.previousSibling?.nodeName==='DIV'&&!next.previousSibling.textContent)next.remove();syncBodyFromRich();return}
+ if(e.target.closest('[data-imgup]')){const prev=sib(fig,'previousSibling');if(prev){prev.before(fig);syncBodyFromRich()}return}
+ if(e.target.closest('[data-imgdown]')){const next=sib(fig,'nextSibling');if(next){next.after(fig);syncBodyFromRich()}return}
+ if(e.target.nodeName==='IMG')openImageViewer(e.target.src);
+});
+// Paste images as pictures and everything else as plain text.
+rich.addEventListener('paste',e=>{
+ const files=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));
+ e.preventDefault();
+ if(files.length){addImageFiles(files);return}
+ const text=e.clipboardData?.getData('text/plain')||'';if(text)document.execCommand('insertText',false,text);
+});
 $('addImage').addEventListener('click',()=>$('imagePick').click());
 $('takePhoto').addEventListener('click',()=>$('cameraPick').click());
 for(const id of ['imagePick','cameraPick'])$(id).addEventListener('change',async e=>{await addImageFiles(e.target.files||[]);e.target.value=''});
-$('noteImages').addEventListener('click',e=>{
- const rm=e.target.closest('[data-imgremove]');if(rm){noteImages.splice(Number(rm.dataset.imgremove),1);drawNoteImages();return}
- const v=e.target.closest('[data-imgview]');if(v)openImageViewer(noteImages[Number(v.dataset.imgview)].src);
-});
 $('imgViewer').addEventListener('click',()=>$('imgViewer').classList.remove('show'));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('imgViewer').classList.remove('show')});
-// Paste an image straight into the note text.
-$('noteBody').addEventListener('paste',e=>{const files=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));if(files.length){e.preventDefault();addImageFiles(files)}});
 $('close').addEventListener('click',closeEditor);$('save').addEventListener('click',saveNote);$('saveBottom').addEventListener('click',saveNote);$('search').addEventListener('input',render);
 $('delete').addEventListener('click',async()=>{if(!editingId)return;if(!currentUser){notes=notes.map(n=>n.id===editingId?{...n,deletedAt:new Date().toISOString(),updatedAt:Date.now()}:n);safeStorage.setItem('meow-local-notes',JSON.stringify(notes));render();closeEditor();toast('ย้ายโน้ตไปถังขยะแล้ว');return}queueWrite(setDoc(doc(noteCollection(),editingId),{deletedAt:new Date().toISOString(),updatedAt:serverTimestamp()}, {merge:true}),e=>'ลบไม่สำเร็จ: '+e.message);closeEditor();toast('ย้ายโน้ตไปถังขยะแล้ว')});
 document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===b));render()}));
@@ -994,10 +1068,10 @@ $('categoryFilter').addEventListener('change',render);
 $('newCategory').addEventListener('click',()=>{const name=prompt('ชื่อหมวดหมู่ใหม่');if(!name?.trim())return;const val=name.trim();if(![...$('categoryFilter').options].some(o=>o.value===val)){const a=new Option(val,val);$('categoryFilter').add(a);const b=new Option(val,val);$('noteCategory').add(b)}$('categoryFilter').value=val;render()});
 $('themeToggle').addEventListener('click',()=>{const dark=!document.body.classList.contains('dark');document.body.classList.toggle('dark',dark);safeStorage.setItem('note-dark',dark?'1':'0');$('themeToggle').textContent=dark?'☀️ ธีมสว่าง':'🌙 ธีมมืด';const cfg=JSON.parse(safeStorage.getItem('note-color-config')||'null')||colorPresets.lavender;const next={...cfg,bg:dark?'#211f29':'#fdf9ff',accent:dark?'#b8a5f2':cfg.accent,ink:dark?'#f2edf7':cfg.ink,notes:dark?colorPresets.night.notes:cfg.notes};applyColorConfig(next,true)});
 if(safeStorage.getItem('note-dark')==='1'){document.body.classList.add('dark');$('themeToggle').textContent='☀️ ธีมสว่าง'}
-$('exportTxt').addEventListener('click',()=>{const rows=notes.filter(n=>!n.deletedAt).map(n=>`${n.title||'ไม่มีชื่อ'}\n${n.category?'หมวดหมู่: '+n.category+'\n':''}${n.body}\n${(n.checklist||[]).map(x=>`${x.done?'[x]':'[ ]'} ${x.text}`).join('\n')}\n`).join('\n---\n\n');downloadText(rows,'note-export.txt','text/plain;charset=utf-8')});
-$('exportPdf').addEventListener('click',()=>{const printable=notes.filter(n=>!n.deletedAt);const w=window.open('','_blank');if(!w){toast('อนุญาตป๊อปอัปเพื่อส่งออก PDF');return}w.document.write(`<html><head><title>เหมียวไดอารี่ — ส่งออก</title><meta charset="utf-8"><style>body{font-family:system-ui,sans-serif;padding:28px;color:#302b37}article{break-inside:avoid;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:24px}h2{font-size:18px}pre{white-space:pre-wrap;font:inherit}</style></head><body><h1>เหมียวไดอารี่ — ส่งออก</h1>${printable.map(n=>`<article><h2>${esc(n.title||'ไม่มีชื่อ')}</h2><p>${esc(n.category||'')}</p><pre>${esc(n.body)}</pre>${(n.images||[]).map(im=>`<img src="${esc(im.src)}" style="max-width:100%;border-radius:8px;margin:6px 0">`).join('')}${(n.checklist||[]).map(x=>`<p>${x.done?'☑':'☐'} ${esc(x.text)}</p>`).join('')}</article>`).join('')}<script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()});
+$('exportTxt').addEventListener('click',()=>{const rows=notes.filter(n=>!n.deletedAt).map(n=>`${n.title||'ไม่มีชื่อ'}\n${n.category?'หมวดหมู่: '+n.category+'\n':''}${stripImageTokens(n.body,'[รูป]')}\n${(n.checklist||[]).map(x=>`${x.done?'[x]':'[ ]'} ${x.text}`).join('\n')}\n`).join('\n---\n\n');downloadText(rows,'note-export.txt','text/plain;charset=utf-8')});
+$('exportPdf').addEventListener('click',()=>{const printable=notes.filter(n=>!n.deletedAt);const w=window.open('','_blank');if(!w){toast('อนุญาตป๊อปอัปเพื่อส่งออก PDF');return}w.document.write(`<html><head><title>เหมียวไดอารี่ — ส่งออก</title><meta charset="utf-8"><style>body{font-family:system-ui,sans-serif;padding:28px;color:#302b37}article{break-inside:avoid;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:24px}h2{font-size:18px}pre{white-space:pre-wrap;font:inherit}</style></head><body><h1>เหมียวไดอารี่ — ส่งออก</h1>${printable.map(n=>`<article><h2>${esc(n.title||'ไม่มีชื่อ')}</h2><p>${esc(n.category||'')}</p><pre>${bodyToHtml(n)}</pre>${(n.checklist||[]).map(x=>`<p>${x.done?'☑':'☐'} ${esc(x.text)}</p>`).join('')}</article>`).join('')}<script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()});
 function downloadText(content,name,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
-$('aiSummary').addEventListener('click',()=>{const text=($('noteBody').value||'').trim();if(!text){$('aiResult').textContent='เพิ่มเนื้อหาโน้ตก่อน';return}const sentences=text.split(/(?<=[.!?。！？\n])\s+/).filter(Boolean);const summary=sentences.length>3?sentences.slice(0,3).join(' '):text;$('aiResult').textContent='สรุป: '+summary;});
+$('aiSummary').addEventListener('click',()=>{const text=stripImageTokens($('noteBody').value);if(!text){$('aiResult').textContent='เพิ่มเนื้อหาโน้ตก่อน';return}const sentences=text.split(/(?<=[.!?。！？\n])\s+/).filter(Boolean);const summary=sentences.length>3?sentences.slice(0,3).join(' '):text;$('aiResult').textContent='สรุป: '+summary;});
 
 const moods=[['😊','มีความสุข'],['😌','สงบ'],['😐','เฉย ๆ'],['😔','เศร้า'],['😤','เครียด'],['🤩','ตื่นเต้น'],['🥰','อบอุ่น'],['😴','เหนื่อย']];let todayMood='';
 $('moodChoices').innerHTML=moods.map(([e,t])=>`<button class="moodChoice" data-mood="${e}">${e}<br><small>${t}</small></button>`).join('');
@@ -1178,7 +1252,7 @@ Object.assign(aiPopupI18n.hi,{demoSummary:'🧪 डेमो मोड (डा�
 
 function aiText(key){return (aiPopupI18n[language]||aiPopupI18n.en)[key]||aiPopupI18n.en[key]||key}
 function applyAiPopupLanguage(){const map={aiFabLabel:'fab',aiDemoSummary:'demoSummary',aiPopupTitle:'title',aiPopupSub:'sub',aiActionSummary:'summary',aiActionIdeas:'ideas',aiActionPolish:'polish',aiActionPrompt:'prompt',aiAsk:'ask',aiPopupNotice:'notice',aiInsert:'insert',aiLoadLocalModel:'loadModel',aiDemoMode:'demoMode'};for(const [id,key] of Object.entries(map)){const el=$(id);if(el)el.textContent=aiText(key)}$('aiPopupNotice').textContent=demoAiMode?aiText('demoNotice'):(localAiPipeline?aiText('localPrivacy'):aiText('notice')+'\n'+aiText('modelHelp'));if(!$('aiModelStatus').dataset.busy)$('aiModelStatus').textContent=demoAiMode?aiText('demoReady'):(localAiPipeline?aiText('ready'):aiText('notLoaded'));$('aiPrompt').placeholder=aiText('placeholder');$('aiPrompt').setAttribute('aria-label',aiText('placeholder'));$('aiPopupClose').setAttribute('aria-label',language==='th'?'ปิด':language==='ja'?'閉じる':language==='zh'?'关闭':language==='ko'?'닫기':'Close')}
-function aiSourceText(){const editor=$('noteBody')?.value?.trim();if(editor)return editor;const latest=notes.filter(n=>!n.deletedAt).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0))[0];return latest?.body||''}
+function aiSourceText(){const editor=stripImageTokens($('noteBody')?.value);if(editor)return editor;const latest=notes.filter(n=>!n.deletedAt).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0))[0];return latest?.body||''}
 let localAiPipeline=null,localAiLoading=false,demoAiMode=false;
 $('aiDemoMode').addEventListener('click',()=>{demoAiMode=true;applyAiPopupLanguage();setAiModelStatus('demoReady');$('aiOutput').textContent=aiText('demoNotice');$('aiOutput').dataset.answer='';$('aiInsert').hidden=true});
 function setAiModelStatus(key){const el=$('aiModelStatus');el.textContent=aiText(key);el.dataset.busy=(key==='loading'||key==='generating')?'1':''}
