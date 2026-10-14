@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.likewacom.meowdiary",
       "sha256_cert_fingerprints": [
-        "FC:76:04:C1:7D:13:D3:93:60:D7:00:79:B4:30:1E:19:62:1A:FA:42:67:D8:83:E0:10:B6:8F:35:4D:35:B0:CA"
+        "FC:76:04:C1:7D:13:D3:93:60:D7:00:79:B4:30:1E:19:62:1A:FA:42:67:D8:83:E0:10:B6:8F:35:4D:35:B0:CA",
+        "83:5C:DF:95:3C:16:D3:22:65:FC:13:E0:98:DB:42:6C:1D:5A:42:51:E7:DF:80:54:DA:DD:C8:E2:41:E2:AA:9D"
       ]
     }
   }

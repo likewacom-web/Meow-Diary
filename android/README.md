@@ -33,6 +33,10 @@ Android ต้องตรวจว่าเว็บเป็นของแอ
    App signing คัดลอก **SHA-256 ของ App signing key** มาเพิ่มในรายการ
    `sha256_cert_fingerprints` (เก็บของเดิมไว้ด้วย)
 
+ไฟล์ทดสอบ (`app-debug.apk` / หน้า download) เซ็นด้วยกุญแจทดสอบ `android/app/test-signing.jks`
+ซึ่งตั้งใจเก็บไว้ใน repo ให้ fingerprint คงที่ ใช้กับรุ่นทดสอบเท่านั้น
+(ไฟล์ที่ส่ง Play Store ใช้กุญแจ upload ส่วนตัวจาก Secrets)
+
 ## 4. ส่งขึ้น Play Store
 
 1. สมัคร Google Play Console (ค่าธรรมเนียมครั้งเดียว 25 USD)
