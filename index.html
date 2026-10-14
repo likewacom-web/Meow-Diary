@@ -358,6 +358,17 @@ body.dark .dangerBtn{background:#3a2530;border-color:#6b3a4c;color:#ffb3c8}
 .edithead{position:sticky;top:-15px;z-index:3;background:var(--bg);margin-top:-15px;padding-top:15px}
 .editorbottom{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom));z-index:3;background:var(--bg);margin-bottom:calc(-18px - env(safe-area-inset-bottom));padding:10px 0 calc(18px + env(safe-area-inset-bottom));border-top:1px solid #ece4ee}
 body.dark .editorbottom{border-color:#40374a}
+
+/* ---- dictation / summary ---- */
+#dictate.listening{background:var(--purple);color:#fff;border-color:var(--purple);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.6}}
+.summaryCard{max-height:86dvh;overflow:auto}
+.sumGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+.sumTile{background:var(--lav);border-radius:16px;padding:12px 8px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.sumTile b{font-size:20px;color:var(--ink)}.sumTile span{font-size:11px;color:var(--muted)}
+.sumH{font-size:14px;margin:18px 0 8px}
+.sumBar{display:flex;align-items:center;gap:8px;margin:6px 0}.sumBar span{font-size:20px;width:28px}.sumBar i{height:12px;border-radius:8px;background:var(--purple);display:block}.sumBar b{font-size:12px;color:var(--muted)}
+.sumEmpty{color:var(--muted);font-size:13px;text-align:center;padding:12px}
 </style>
 </head>
 <body><main class="app">
@@ -458,7 +469,7 @@ body.dark .editorbottom{border-color:#40374a}
 <div class="menuLabel" id="menuShowLabel">แสดง</div>
 <nav class="filters"><button class="chip active" data-filter="all" data-i18n="all">ทั้งหมด</button><button class="chip" data-filter="pinned" data-i18n="pinned">📌 ปักหมุด</button><button class="chip" data-filter="trash">🗑️ ถังขยะ</button></nav>
 <div class="menuLabel" id="menuToolsLabel">เครื่องมือ</div>
-<div class="extrasBar"><button id="openCalendar">🗓️ ปฏิทิน</button><button id="openMood" hidden>😊 อารมณ์วันนี้</button><button id="openTemplates">✨ แม่แบบ</button><button id="favoritesFilter" hidden>⭐ โน้ตโปรด</button><button id="voiceQuick">🎙️ บันทึกเสียง</button></div>
+<div class="extrasBar"><button id="openSummary">📊 <span data-nav="summaryTitle">สรุปประจำเดือน</span></button><button id="openCalendar">🗓️ ปฏิทิน</button><button id="openMood" hidden>😊 อารมณ์วันนี้</button><button id="openTemplates">✨ แม่แบบ</button><button id="favoritesFilter" hidden>⭐ โน้ตโปรด</button><button id="voiceQuick">🎙️ บันทึกเสียง</button></div>
 <div class="toolbar"><select id="categoryFilter" aria-label="หมวดหมู่"><option value="">ทุกหมวดหมู่</option><option>ส่วนตัว</option><option>งาน</option><option>เรียน</option><option>ไอเดีย</option></select><button id="newCategory">＋ หมวดหมู่</button><button id="themeToggle">🌙 ธีมมืด</button><button id="exportTxt">↓ TXT</button><button id="exportPdf">↓ PDF / พิมพ์</button></div>
 <div class="extrasBar menuMore"><button type="button" id="menuSettings">⚙️ ตั้งค่า</button><button type="button" id="languageQuickOpen" class="languageShortcut" aria-label="Change language">🌐 <span id="languageQuickLabel">ภาษา</span></button></div>
 </section></div>
@@ -505,6 +516,8 @@ body.dark .editorbottom{border-color:#40374a}
   <div class="settingsSection"><div id="accountSettingsLabel">บัญชี</div><p id="settingsAccountStatus">ยังไม่ได้เข้าสู่ระบบ</p><button class="settingsAction" id="settingsSignIn">เข้าสู่ระบบ Google</button></div>
   <div class="settingsSection" id="dailyReminderSection" hidden><div>🔔 <span data-nav="dailyTitle">เตือนเขียนไดอารี่ทุกวัน</span></div><p data-nav="dailyHint">แจ้งเตือนทุกวันตามเวลาที่เลือก แม้ปิดแอปอยู่</p>
  <div class="dailyRow"><label class="switchRow"><input type="checkbox" id="dailyReminderOn"> <span data-nav="dailyOn">เปิดใช้</span></label><input type="time" id="dailyReminderTime" value="20:00" aria-label="เวลา"></div></div>
+<div class="settingsSection" id="autoBackupSection" hidden><div>💾 <span data-nav="backupTitle">สำรองอัตโนมัติทุกสัปดาห์</span></div><p data-nav="backupHint">เก็บไฟล์สำรองไว้ในโฟลเดอร์ Download/MeowDiary ของมือถือ</p>
+ <div class="dailyRow"><label class="switchRow"><input type="checkbox" id="autoBackupOn"> <span data-nav="dailyOn">เปิดใช้</span></label><button type="button" class="settingsAction" id="backupNowBtn" data-nav="backupNow">สำรองตอนนี้</button></div><p id="backupLastText"></p></div>
 <div class="settingsSection" id="appLockSection" hidden><div>🔒 <span data-nav="lockTitle">ล็อกแอปด้วยลายนิ้วมือ</span></div><p data-nav="lockHint">ใช้ลายนิ้วมือ ใบหน้า หรือรหัสหน้าจอของมือถือเพื่อเปิดแอป</p>
  <div class="dailyRow"><label class="switchRow"><input type="checkbox" id="appLockOn"> <span data-nav="dailyOn">เปิดใช้</span></label></div></div>
 <div class="settingsSection" id="pinSection"><div id="pinSettingsTitle">ความปลอดภัย / PIN</div><p id="pinSettingsHint">ตั้ง PIN และยืนยันรหัสเพื่อช่วยล็อกแอปบนอุปกรณ์นี้ (ไม่ใช่การเข้ารหัสเนื้อหาใน Firestore)</p><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px"><input id="pinSetup" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="PIN 4–8 หลัก" aria-label="PIN" style="width:100%;box-sizing:border-box;border:1px solid #e6dfe8;border-radius:12px;padding:10px"><input id="pinConfirm" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="ยืนยัน PIN" aria-label="ยืนยัน PIN" style="width:100%;box-sizing:border-box;border:1px solid #e6dfe8;border-radius:12px;padding:10px"><div style="display:flex;gap:8px"><button class="settingsAction" id="pinSave" style="margin-top:0;flex:1">ตั้ง PIN</button><button class="settingsAction" id="pinRemove" style="margin-top:0;background:#a35d75;flex:1">ลบ PIN</button></div></div></div>
@@ -541,6 +554,7 @@ body.dark .editorbottom{border-color:#40374a}
 <div class="featureModal" id="statsModal" role="dialog" aria-modal="true"><section class="featureCard"><div class="settingsHead"><button class="close" id="statsClose">×</button><h2 id="statsTitle">สถิติอารมณ์</h2></div><p id="statsHint">สรุปจากอารมณ์ที่บันทึกไว้ในอุปกรณ์นี้</p><div class="statTiles" id="statsTiles"></div><div class="moodBars" id="moodBars"></div></section></div>
 <div class="featureModal" id="backupModal" role="dialog" aria-modal="true"><section class="featureCard"><div class="settingsHead"><button class="close" id="backupClose">×</button><h2 id="backupTitle">สำรองและกู้คืน</h2></div><p id="backupHint">ส่งออกข้อมูลเป็นไฟล์ JSON เพื่อเก็บไว้หรือย้ายเครื่อง</p><div class="backupActions"><button id="exportBackup">⬇️ ส่งออกข้อมูล</button><button id="importBackupBtn">⬆️ กู้คืนจากไฟล์</button></div><input class="restoreFile" id="backupFile" type="file" accept="application/json,.json" hidden><p id="backupStatus" aria-live="polite"></p><p id="backupCaution">การนำเข้าโน้ตจากไฟล์ต้องเข้าสู่ระบบ Google; ข้อมูลอารมณ์และน้องแมวจะกู้คืนในอุปกรณ์นี้</p></section></div>
 <div class="featureModal" id="widgetModal" role="dialog" aria-modal="true" hidden><section class="featureCard"><div class="settingsHead"><button class="close" id="widgetClose">×</button><h2 id="widgetTitle">วิดเจ็ตเหมียวไดอารี่</h2></div><div class="widgetPreview"><div style="display:flex;gap:12px;align-items:center"><span class="widgetCat" id="widgetCat">🐱</span><div><h3 id="widgetPetName">น้องเหมียว</h3><p id="widgetWidgetStats">เหรียญ 0 · เลเวล 1</p><p id="widgetDiaryCount">บันทึกวันนี้ 0 รายการ</p></div></div><button id="widgetWrite">＋ เขียนบันทึก</button></div><p id="widgetHint">นี่เป็นการ์ดทางลัดในแอป HTML หากต้องการวิดเจ็ตจริงบนหน้าจอหลัก Android ต้องทำส่วน Android native เพิ่ม</p></section></div>
+<div class="calendarModal" id="summaryModal" role="dialog" aria-modal="true" aria-labelledby="summaryHeading"><section class="calendarCard summaryCard"><div class="settingsHead"><button class="close" id="summaryClose" aria-label="Close">×</button><h2 id="summaryHeading"></h2><span style="flex:1"></span><button class="textbtn" id="sumPrev" aria-label="Previous month">‹</button><button class="textbtn" id="sumNext" aria-label="Next month">›</button></div><div id="summaryBody"></div></section></div>
 <div class="imgDropLine" id="imgDropLine" aria-hidden="true"></div>
 <div class="imgViewer" id="imgViewer" role="dialog" aria-modal="true" aria-label="Image"><img id="imgViewerImg" alt=""><button type="button" id="imgViewerClose" aria-label="Close">×</button></div>
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="แก้ไขบันทึก"><section class="editor">
@@ -549,13 +563,14 @@ body.dark .editorbottom{border-color:#40374a}
 <div class="checkMain" id="checkMain" hidden></div>
 <div class="fieldbody richBody" id="noteRich" contenteditable="true" role="textbox" aria-multiline="true" aria-label="เนื้อหาโน้ต"></div>
 <textarea class="fieldbody" hidden id="noteBody" placeholder="เขียนสิ่งที่คุณคิดไว้ที่นี่..." aria-label="เนื้อหาโน้ต" data-i18n-placeholder="bodyPlaceholder"></textarea>
-<div class="imageActions" id="imageActions"><button type="button" id="addImage">🖼️ <span data-nav="addImage">เพิ่มรูป</span></button><button type="button" id="takePhoto">📷 <span data-nav="takePhoto">ถ่ายรูป</span></button><span id="imageStatus" role="status"></span></div>
+<div class="imageActions" id="imageActions"><button type="button" id="addImage">🖼️ <span data-nav="addImage">เพิ่มรูป</span></button><button type="button" id="takePhoto">📷 <span data-nav="takePhoto">ถ่ายรูป</span></button><button type="button" id="dictate">🎤 <span data-nav="dictate">พูดพิมพ์</span></button><span id="imageStatus" role="status"></span></div>
 <input id="imagePick" type="file" accept="image/*" multiple hidden><input id="cameraPick" type="file" accept="image/*" capture="environment" hidden>
 <div class="label" data-i18n="noteColor">สีของโน้ต</div><div class="colors" id="colors"><button class="swatch selected" style="background:var(--lav)" data-color="0" aria-label="สีม่วง"></button><button class="swatch" style="background:var(--mint)" data-color="1" aria-label="สีเขียว"></button><button class="swatch" style="background:var(--peach)" data-color="2" aria-label="สีพีช"></button><button class="swatch" style="background:var(--yellow)" data-color="3" aria-label="สีเหลือง"></button><button class="swatch" style="background:var(--pink)" data-color="4" aria-label="สีชมพู"></button></div>
 <div class="editorTools">
 <label>อารมณ์<select id="noteMood"><option value="">ไม่ระบุ</option><option value="😊">😊 มีความสุข</option><option value="😌">😌 สงบ</option><option value="😐">😐 เฉย ๆ</option><option value="😔">😔 เศร้า</option><option value="😤">😤 เครียด</option><option value="🤩">🤩 ตื่นเต้น</option></select></label>
 <label>หมวดหมู่<select id="noteCategory"><option value="">ไม่มีหมวดหมู่</option><option>ส่วนตัว</option><option>งาน</option><option>เรียน</option><option>ไอเดีย</option></select></label>
 <label>แจ้งเตือน<input id="noteReminder" type="datetime-local"></label>
+<label><span data-nav="repeat">เตือนซ้ำ</span><select id="noteRepeat"><option value="" data-nav="repeatNone">ไม่ซ้ำ</option><option value="daily" data-nav="repeatDaily">ทุกวัน</option><option value="weekly" data-nav="repeatWeekly">ทุกสัปดาห์</option><option value="monthly" data-nav="repeatMonthly">ทุกเดือน</option></select></label>
 <label class="wide" id="checklistSection">Checklist / To-do <div id="checklistBox" class="checklistBox"></div><div style="display:flex;gap:6px;margin-top:5px"><input id="checkNew" type="text" placeholder="เพิ่มรายการ..." style="flex:1"><button id="checkAdd" type="button">＋ เพิ่ม</button></div></label>
 <label class="wide">สติกเกอร์ตกแต่ง<div id="noteStickers" class="stickerRow"><button type="button" class="stickerChoice" data-sticker="🐱">🐱</button><button type="button" class="stickerChoice" data-sticker="🐾">🐾</button><button type="button" class="stickerChoice" data-sticker="⭐">⭐</button><button type="button" class="stickerChoice" data-sticker="💗">💗</button></div></label>
 <label class="wide" id="drawSection" hidden>วาดภาพ / เขียนมือ<div class="canvasWrap"><canvas id="drawCanvas" width="700" height="230"></canvas><div class="canvasActions"><button type="button" id="drawClear">ล้างภาพ</button><button type="button" id="drawSave">แนบภาพวาด</button><span id="drawStatus" style="font-size:11px;color:var(--muted)"></span></div></div></label>
@@ -782,15 +797,15 @@ function render(){
  }).sort((a,b)=>Number(!!(b.pinned||b.favorite))-Number(!!(a.pinned||a.favorite))||noteSorters[sortBy](a,b));
  updateFilterTag();afterNotesChanged();
  $('count').textContent=`${list.length} ${language==='th'?'บันทึก':'notes'}`;
- $('notes').innerHTML=list.length?list.map(n=>`<article class="note ${n.deletedAt?'deleted':''}" style="--c:${colors[n.colorIndex]||colors[0]};background:var(--c)" data-open="${esc(n.id)}" tabindex="0" role="button">${n.images?.length?`<img class="noteThumb" src="${esc(n.images[0].src)}" alt="" loading="lazy">`:''}<div class="notehead"><div class="notetitle">${esc(n.title||tr('noTitle'))}</div>${n.pinned||n.favorite?'<span>📌</span>':''}</div><div class="preview">${n.kind==='checklist'||(!n.body&&n.checklist?.length)?esc((n.checklist||[]).slice(0,4).map(x=>(x.done?'☑ ':'☐ ')+x.text).join('\n')||tr('noContent')):esc(stripImageTokens(n.body)||tr('noContent'))}</div><div class="noteMeta">${n.category?`<span class="metaPill">▣ ${esc(n.category)}</span>`:''}${n.checklist?.length?`<span class="metaPill">☑ ${n.checklist.filter(x=>x.done).length}/${n.checklist.length}</span>`:''}${n.images?.length>1?`<span class="metaPill">🖼️ ${n.images.length}</span>`:''}${n.attachments?.length?`<span class="metaPill">📎 ${n.attachments.length}</span>`:''}${n.reminderAt?`<span class="metaPill">⏰ ${esc(new Date(n.reminderAt).toLocaleString())}</span>`:''}</div><div class="notefoot"><time>${dateLabel(n.updatedAt)}</time>${n.deletedAt?`<button class="iconbtn" data-restore="${esc(n.id)}" aria-label="กู้คืน">↶</button><button class="iconbtn" data-purge="${esc(n.id)}" aria-label="ลบถาวร">×</button>`:`<button class="iconbtn" data-pin="${esc(n.id)}" aria-label="ปักหมุด">${n.pinned?'📌':'📍'}</button><button class="iconbtn" data-delete="${esc(n.id)}" aria-label="ย้ายลงถังขยะ">⌫</button>`}</div></article>`).join(''):`<div class="empty"><div style="font-size:45px">📝</div><div>${q?tr('notFound'):filter==='trash'?'ถังขยะว่าง':tr('emptyTitle')}</div><small>${q?tr('trySearch'):tr('emptyHint')}</small></div>`;
+ $('notes').innerHTML=list.length?list.map(n=>`<article class="note ${n.deletedAt?'deleted':''}" style="--c:${colors[n.colorIndex]||colors[0]};background:var(--c)" data-open="${esc(n.id)}" tabindex="0" role="button">${n.images?.length?`<img class="noteThumb" src="${esc(n.images[0].src)}" alt="" loading="lazy">`:''}<div class="notehead"><div class="notetitle">${esc(n.title||tr('noTitle'))}</div>${n.pinned||n.favorite?'<span>📌</span>':''}</div><div class="preview">${n.kind==='checklist'||(!n.body&&n.checklist?.length)?esc((n.checklist||[]).slice(0,4).map(x=>(x.done?'☑ ':'☐ ')+x.text).join('\n')||tr('noContent')):esc(stripImageTokens(n.body)||tr('noContent'))}</div><div class="noteMeta">${n.category?`<span class="metaPill">▣ ${esc(n.category)}</span>`:''}${n.checklist?.length?`<span class="metaPill">☑ ${n.checklist.filter(x=>x.done).length}/${n.checklist.length}</span>`:''}${n.images?.length>1?`<span class="metaPill">🖼️ ${n.images.length}</span>`:''}${n.attachments?.length?`<span class="metaPill">📎 ${n.attachments.length}</span>`:''}${n.reminderAt?`<span class="metaPill">⏰ ${esc(new Date(n.reminderAt).toLocaleString())}${n.reminderRepeat?' 🔁':''}</span>`:''}</div><div class="notefoot"><time>${dateLabel(n.updatedAt)}</time>${n.deletedAt?`<button class="iconbtn" data-restore="${esc(n.id)}" aria-label="กู้คืน">↶</button><button class="iconbtn" data-purge="${esc(n.id)}" aria-label="ลบถาวร">×</button>`:`<button class="iconbtn" data-pin="${esc(n.id)}" aria-label="ปักหมุด">${n.pinned?'📌':'📍'}</button><button class="iconbtn" data-delete="${esc(n.id)}" aria-label="ย้ายลงถังขยะ">⌫</button>`}</div></article>`).join(''):`<div class="empty"><div style="font-size:45px">📝</div><div>${q?tr('notFound'):filter==='trash'?'ถังขยะว่าง':tr('emptyTitle')}</div><small>${q?tr('trySearch'):tr('emptyHint')}</small></div>`;
 }
 function watchNotes(){
  if(unsubscribeNotes)unsubscribeNotes();
- if(!currentUser){notes=[];render();return}
+ if(!currentUser){notes=loadLocalNotes();render();$('syncStatus').textContent=nt('onDevice');return}
  $('syncStatus').textContent=tr('syncing');
  unsubscribeNotes=onSnapshot(query(noteCollection(),orderBy('updatedAt','desc')),{includeMetadataChanges:true},snap=>{
    lastSnapMeta=snap.metadata;
-   notes=snap.docs.map(d=>{const x=d.data({serverTimestamps:'estimate'});return {id:d.id,title:x.title||'',body:x.body||'',pinned:!!x.pinned,colorIndex:Number(x.colorIndex)||0,category:x.category||'',checklist:Array.isArray(x.checklist)?x.checklist:[],reminderAt:x.reminderAt||'',attachments:Array.isArray(x.attachments)?x.attachments:[],deletedAt:x.deletedAt||null,locked:!!x.locked,mood:x.mood||'',stickers:Array.isArray(x.stickers)?x.stickers:[],favorite:!!x.favorite,drawingData:x.drawingData||'',images:Array.isArray(x.images)?x.images:[],kind:x.kind==='checklist'?'checklist':'text',createdAt:x.createdAt?.toMillis?.()||x.createdAt||Date.now(),updatedAt:x.updatedAt?.toMillis?.()||Date.now()}});
+   notes=snap.docs.map(d=>{const x=d.data({serverTimestamps:'estimate'});return {id:d.id,title:x.title||'',body:x.body||'',pinned:!!x.pinned,colorIndex:Number(x.colorIndex)||0,category:x.category||'',checklist:Array.isArray(x.checklist)?x.checklist:[],reminderAt:x.reminderAt||'',reminderRepeat:x.reminderRepeat||'',reminderSentAt:x.reminderSentAt||null,attachments:Array.isArray(x.attachments)?x.attachments:[],deletedAt:x.deletedAt||null,locked:!!x.locked,mood:x.mood||'',stickers:Array.isArray(x.stickers)?x.stickers:[],favorite:!!x.favorite,drawingData:x.drawingData||'',images:Array.isArray(x.images)?x.images:[],kind:x.kind==='checklist'?'checklist':'text',createdAt:x.createdAt?.toMillis?.()||x.createdAt||Date.now(),updatedAt:x.updatedAt?.toMillis?.()||Date.now()}});
    updateSyncStatus();render();if(typeof renderPet==='function')renderPet();checkReminders();
  },err=>{$('syncStatus').textContent='! ซิงก์ไม่สำเร็จ';$('notice').textContent='Firestore แจ้งข้อผิดพลาด: '+err.message;});
 }
@@ -801,7 +816,7 @@ async function saveNote(){
  const id=editingId||crypto.randomUUID(),old=notes.find(n=>n.id===id);
  if(noteKind==='checklist')checkItems=checkItems.filter(x=>String(x.text||'').trim());
  const reminder=$('noteReminder').value?new Date($('noteReminder').value).toISOString():'';
- const data={id,title,body,colorIndex:selectedColor,pinned:$('notePinned').checked,category:$('noteCategory').value,mood:$('noteMood').value||'',stickers:selectedStickers,favorite:$('noteFavorite').checked,checklist:checkItems,reminderAt:reminder,attachments:existingAttachments,images:usedNoteImages(),kind:noteKind,drawingData:drawingData||old?.drawingData||'',deletedAt:null,locked:!!old?.locked,createdAt:old?.createdAt||Date.now(),updatedAt:Date.now()};
+ const data={id,title,body,colorIndex:selectedColor,pinned:$('notePinned').checked,category:$('noteCategory').value,mood:$('noteMood').value||'',stickers:selectedStickers,favorite:$('noteFavorite').checked,checklist:checkItems,reminderAt:reminder,reminderRepeat:reminder?$('noteRepeat').value:'',reminderSentAt:old?.reminderAt===reminder?(old?.reminderSentAt||null):null,attachments:existingAttachments,images:usedNoteImages(),kind:noteKind,drawingData:drawingData||old?.drawingData||'',deletedAt:null,locked:!!old?.locked,createdAt:old?.createdAt||Date.now(),updatedAt:Date.now()};
  if(!currentUser){const next=[data,...notes.filter(n=>n.id!==id)];if(!persistLocalNotes(next)){toast(nt('storageFull'));return}notes=next;render();closeEditor();toast('บันทึกในอุปกรณ์นี้แล้ว ✓');return}
  data.attachments=await uploadAttachments(id);
  queueWrite(setDoc(doc(noteCollection(),id),{...data,updatedAt:serverTimestamp()},{merge:true}));
@@ -817,7 +832,7 @@ function drawAttachments(){
 function openEditor(n=null){
  editingId=n?.id||null;noteImages=[...(n?.images||[])].map(im=>({...im}));selectedColor=n?.colorIndex||0;existingAttachments=[...(n?.attachments||[])];
  $('editorHeading').textContent=n?tr('editNote'):tr('newNote');$('noteTitle').value=n?.title||'';$('noteBody').value=n?.body||'';$('notePinned').checked=!!(n?.pinned||n?.favorite);
- $('noteCategory').value=n?.category||'';$('noteMood').value=n?.mood||'';$('noteFavorite').checked=false;selectedStickers=[...(n?.stickers||[])];drawingData=n?.drawingData||'';$('noteReminder').value=safeDate(n?.reminderAt);$('aiResult').textContent='';
+ $('noteCategory').value=n?.category||'';$('noteMood').value=n?.mood||'';$('noteFavorite').checked=false;selectedStickers=[...(n?.stickers||[])];drawingData=n?.drawingData||'';$('noteReminder').value=safeDate(n?.reminderAt);$('noteRepeat').value=n?.reminderRepeat||'';$('aiResult').textContent='';
  drawNoteImages();$('imageStatus').textContent='';$('drawSection').hidden=!(n?.drawingData);drawChecklist(n?.checklist||[]);setNoteKind(n?(n.kind||(n.checklist?.length&&!n.body?'checklist':'text')):nextNoteKind);nextNoteKind='text';drawAttachments();drawStickerSelection();restoreDrawing();$('delete').hidden=!n;
  document.querySelectorAll('.swatch').forEach(b=>b.classList.toggle('selected',Number(b.dataset.color)===selectedColor));
  $('overlay').classList.add('show');document.body.style.overflow='hidden';savedRange=null;setTimeout(()=>$('noteTitle').focus(),100)
@@ -829,7 +844,10 @@ function checkReminders(){
  const now=Date.now();
  notes.filter(n=>n.reminderAt&&!n.deletedAt&&!n.reminderSentAt&&new Date(n.reminderAt).getTime()<=now).forEach(async n=>{
   new Notification(n.title||'Note reminder',{body:stripImageTokens(n.body)||'ถึงเวลาเปิดดูโน้ตของคุณ'});
-  if(currentUser)setDoc(doc(noteCollection(),n.id),{reminderSentAt:new Date().toISOString(),updatedAt:serverTimestamp()},{merge:true}).catch(()=>{})
+  // Repeating reminders move to their next time; one-off reminders are marked as sent.
+  const patch=n.reminderRepeat?{reminderAt:new Date(nextOccurrence(new Date(n.reminderAt).getTime(),n.reminderRepeat,now)).toISOString()}:{reminderSentAt:new Date().toISOString()};
+  if(currentUser)setDoc(doc(noteCollection(),n.id),{...patch,updatedAt:serverTimestamp()},{merge:true}).catch(()=>{});
+  else{Object.assign(n,patch);persistLocalNotes(notes)}
  });
 }
 setInterval(checkReminders,30000);
@@ -837,8 +855,8 @@ $('add').addEventListener('click',()=>openSheet('addSheet'));
 
 // ---- App shell UI: bottom nav, add sheet, menu, sort and view ----
 const navI18n={
- th:{notes:'โน้ต',calendar:'ปฏิทิน',pet:'น้องเหมียว',search:'ค้นหา',menu:'เมนู',add:'เพิ่ม',text:'ข้อความ',checklist:'เช็กลิสต์',template:'จากแม่แบบ',voice:'บันทึกเสียง',show:'แสดง',tools:'เครื่องมือ',ai:'✨ ผู้ช่วย AI',settings:'⚙️ ตั้งค่า',updated:'แก้ไขล่าสุด',created:'สร้างล่าสุด',title:'ชื่อ ก-ฮ',color:'สี',pinned:'📌 ปักหมุด',trash:'🗑️ ถังขยะ',favorites:'⭐ โน้ตโปรด',share:'แชร์',copied:'คัดลอกโน้ตแล้ว',themeAuto:'สว่าง/มืดอัตโนมัติตามมือถือ',privacy:'นโยบายความเป็นส่วนตัว',dangerTitle:'ข้อมูลของฉัน',deleteHint:'ลบโน้ตทั้งหมด บัญชี และข้อมูลในเครื่องนี้ถาวร กู้คืนไม่ได้',deleteAccount:'ลบบัญชีและข้อมูลทั้งหมด',deleteConfirm1:'ลบบัญชีและโน้ตทั้งหมดในบัญชีนี้ถาวร?\nกู้คืนไม่ได้',deleteConfirmLocal:'ลบโน้ตทั้งหมดในเครื่องนี้ถาวร?\nกู้คืนไม่ได้',deleteConfirm2:'ยืนยันอีกครั้ง: ลบทั้งหมดเลยใช่ไหม?',deleteOffline:'ต้องเชื่อมต่ออินเทอร์เน็ตก่อนลบบัญชี',deleting:'กำลังลบ...',deleted:'ลบข้อมูลทั้งหมดแล้ว',deleteFailed:'ลบไม่สำเร็จ: ',draw:'วาดภาพ',lockTitle:'ล็อกแอปด้วยลายนิ้วมือ',lockHint:'ใช้ลายนิ้วมือ ใบหน้า หรือรหัสหน้าจอของมือถือเพื่อเปิดแอป',lockOn:'เปิดล็อกแอปแล้ว',lockOff:'ปิดล็อกแอปแล้ว',lockUnavailable:'มือถือยังไม่ได้ตั้งลายนิ้วมือหรือรหัสหน้าจอ',toChecklist:'☑ เช็กลิสต์',toText:'📝 ข้อความ',addItem:'เพิ่มรายการ',itemPlaceholder:'รายการ',dailyTitle:'เตือนเขียนไดอารี่ทุกวัน',dailyHint:'แจ้งเตือนทุกวันตามเวลาที่เลือก แม้ปิดแอปอยู่',dailyOn:'เปิดใช้',dailySaved:'ตั้งเตือนทุกวันเวลา ',dailyOff:'ปิดการเตือนรายวันแล้ว',sharedIn:'นำเข้าจากการแชร์แล้ว ✓',image:'รูปภาพ',addImage:'เพิ่มรูป',takePhoto:'ถ่ายรูป',imageWorking:'กำลังย่อรูป...',imageTooBig:'รูปในโน้ตนี้เต็มแล้ว ลองลบบางรูปหรือแยกเป็นโน้ตใหม่',imageFailed:'เปิดรูปนี้ไม่ได้',storageFull:'พื้นที่ในเครื่องเต็ม บันทึกโน้ตที่มีรูปไม่ได้ ลองเข้าสู่ระบบเพื่อซิงก์ หรือลบรูปบางส่วน'},
- en:{notes:'Notes',calendar:'Calendar',pet:'Kitty',search:'Search',menu:'Menu',add:'Add',text:'Text',checklist:'Checklist',template:'From template',voice:'Voice note',show:'Show',tools:'Tools',ai:'✨ AI assistant',settings:'⚙️ Settings',updated:'Modified time',created:'Created time',title:'Title A-Z',color:'Color',pinned:'📌 Pinned',trash:'🗑️ Trash',favorites:'⭐ Favorites',share:'Share',copied:'Note copied',themeAuto:'Light/dark follows the phone',privacy:'Privacy policy',dangerTitle:'My data',deleteHint:'Permanently delete all notes, your account and data on this device. This cannot be undone.',deleteAccount:'Delete account and all data',deleteConfirm1:'Permanently delete your account and all its notes?\nThis cannot be undone.',deleteConfirmLocal:'Permanently delete all notes on this device?\nThis cannot be undone.',deleteConfirm2:'Are you sure? Delete everything?',deleteOffline:'Connect to the internet to delete your account',deleting:'Deleting...',deleted:'All data deleted',deleteFailed:'Could not delete: ',draw:'Drawing',lockTitle:'Lock app with fingerprint',lockHint:'Use your fingerprint, face or screen lock to open the app',lockOn:'App lock on',lockOff:'App lock off',lockUnavailable:'Set up a fingerprint or screen lock on this phone first',toChecklist:'☑ Checklist',toText:'📝 Text',addItem:'Add item',itemPlaceholder:'Item',dailyTitle:'Daily diary reminder',dailyHint:'A reminder every day at this time, even when the app is closed',dailyOn:'On',dailySaved:'Daily reminder set for ',dailyOff:'Daily reminder turned off',sharedIn:'Added from share ✓',image:'Image',addImage:'Add image',takePhoto:'Take photo',imageWorking:'Resizing image...',imageTooBig:'This note is full of images. Remove some or start a new note',imageFailed:"Couldn't open this image",storageFull:'Device storage is full, so this note with images could not be saved. Sign in to sync, or remove some images'}
+ th:{notes:'โน้ต',calendar:'ปฏิทิน',pet:'น้องเหมียว',search:'ค้นหา',menu:'เมนู',add:'เพิ่ม',text:'ข้อความ',checklist:'เช็กลิสต์',template:'จากแม่แบบ',voice:'บันทึกเสียง',show:'แสดง',tools:'เครื่องมือ',ai:'✨ ผู้ช่วย AI',settings:'⚙️ ตั้งค่า',updated:'แก้ไขล่าสุด',created:'สร้างล่าสุด',title:'ชื่อ ก-ฮ',color:'สี',pinned:'📌 ปักหมุด',trash:'🗑️ ถังขยะ',favorites:'⭐ โน้ตโปรด',onDevice:'บันทึกในอุปกรณ์นี้',importLocal:'มีโน้ตในเครื่องนี้ {n} รายการ ย้ายขึ้นบัญชี Google เพื่อซิงก์ไหม?',imported:'ย้ายโน้ตขึ้นบัญชีแล้ว ✓',repeat:'เตือนซ้ำ',repeatNone:'ไม่ซ้ำ',repeatDaily:'ทุกวัน',repeatWeekly:'ทุกสัปดาห์',repeatMonthly:'ทุกเดือน',trash30:'ลบถาวรอัตโนมัติหลัง 30 วัน',dictate:'พูดพิมพ์',dictateUnsupported:'อุปกรณ์นี้ยังพิมพ์ด้วยเสียงไม่ได้',dictateFailed:'ฟังไม่ชัด ลองอีกครั้ง',summaryTitle:'สรุปประจำเดือน',sumNotes:'โน้ต',sumDays:'วันที่เขียน',sumStreak:'ต่อเนื่องสูงสุด',sumNow:'ต่อเนื่องตอนนี้',sumDone:'ติ๊กเสร็จ',sumImages:'รูป',sumMoods:'อารมณ์เดือนนี้',sumNoMood:'ยังไม่มีอารมณ์ในเดือนนี้ ลองเลือกอารมณ์ตอนเขียนโน้ต',sumEmpty:'เดือนนี้ยังไม่มีโน้ต',sumDaysUnit:'วัน',backupTitle:'สำรองอัตโนมัติทุกสัปดาห์',backupHint:'เก็บไฟล์สำรองไว้ในโฟลเดอร์ Download/MeowDiary ของมือถือ',backupDone:'สำรองข้อมูลอัตโนมัติแล้ว 💾',backupLast:'สำรองล่าสุด: ',backupNever:'ยังไม่เคยสำรอง',backupNow:'สำรองตอนนี้',share:'แชร์',copied:'คัดลอกโน้ตแล้ว',themeAuto:'สว่าง/มืดอัตโนมัติตามมือถือ',privacy:'นโยบายความเป็นส่วนตัว',dangerTitle:'ข้อมูลของฉัน',deleteHint:'ลบโน้ตทั้งหมด บัญชี และข้อมูลในเครื่องนี้ถาวร กู้คืนไม่ได้',deleteAccount:'ลบบัญชีและข้อมูลทั้งหมด',deleteConfirm1:'ลบบัญชีและโน้ตทั้งหมดในบัญชีนี้ถาวร?\nกู้คืนไม่ได้',deleteConfirmLocal:'ลบโน้ตทั้งหมดในเครื่องนี้ถาวร?\nกู้คืนไม่ได้',deleteConfirm2:'ยืนยันอีกครั้ง: ลบทั้งหมดเลยใช่ไหม?',deleteOffline:'ต้องเชื่อมต่ออินเทอร์เน็ตก่อนลบบัญชี',deleting:'กำลังลบ...',deleted:'ลบข้อมูลทั้งหมดแล้ว',deleteFailed:'ลบไม่สำเร็จ: ',draw:'วาดภาพ',lockTitle:'ล็อกแอปด้วยลายนิ้วมือ',lockHint:'ใช้ลายนิ้วมือ ใบหน้า หรือรหัสหน้าจอของมือถือเพื่อเปิดแอป',lockOn:'เปิดล็อกแอปแล้ว',lockOff:'ปิดล็อกแอปแล้ว',lockUnavailable:'มือถือยังไม่ได้ตั้งลายนิ้วมือหรือรหัสหน้าจอ',toChecklist:'☑ เช็กลิสต์',toText:'📝 ข้อความ',addItem:'เพิ่มรายการ',itemPlaceholder:'รายการ',dailyTitle:'เตือนเขียนไดอารี่ทุกวัน',dailyHint:'แจ้งเตือนทุกวันตามเวลาที่เลือก แม้ปิดแอปอยู่',dailyOn:'เปิดใช้',dailySaved:'ตั้งเตือนทุกวันเวลา ',dailyOff:'ปิดการเตือนรายวันแล้ว',sharedIn:'นำเข้าจากการแชร์แล้ว ✓',image:'รูปภาพ',addImage:'เพิ่มรูป',takePhoto:'ถ่ายรูป',imageWorking:'กำลังย่อรูป...',imageTooBig:'รูปในโน้ตนี้เต็มแล้ว ลองลบบางรูปหรือแยกเป็นโน้ตใหม่',imageFailed:'เปิดรูปนี้ไม่ได้',storageFull:'พื้นที่ในเครื่องเต็ม บันทึกโน้ตที่มีรูปไม่ได้ ลองเข้าสู่ระบบเพื่อซิงก์ หรือลบรูปบางส่วน'},
+ en:{notes:'Notes',calendar:'Calendar',pet:'Kitty',search:'Search',menu:'Menu',add:'Add',text:'Text',checklist:'Checklist',template:'From template',voice:'Voice note',show:'Show',tools:'Tools',ai:'✨ AI assistant',settings:'⚙️ Settings',updated:'Modified time',created:'Created time',title:'Title A-Z',color:'Color',pinned:'📌 Pinned',trash:'🗑️ Trash',favorites:'⭐ Favorites',onDevice:'Saved on this device',importLocal:'There are {n} notes on this device. Move them to your Google account to sync?',imported:'Notes moved to your account ✓',repeat:'Repeat',repeatNone:'Never',repeatDaily:'Daily',repeatWeekly:'Weekly',repeatMonthly:'Monthly',trash30:'deleted forever after 30 days',dictate:'Dictate',dictateUnsupported:'Voice typing is not available here',dictateFailed:'Didn\'t catch that, try again',summaryTitle:'Monthly summary',sumNotes:'Notes',sumDays:'Days written',sumStreak:'Best streak',sumNow:'Current streak',sumDone:'Ticked',sumImages:'Pictures',sumMoods:'Moods this month',sumNoMood:'No moods yet this month. Pick one when you write a note',sumEmpty:'No notes this month yet',sumDaysUnit:'days',backupTitle:'Weekly automatic backup',backupHint:'Backup files go to Download/MeowDiary on your phone',backupDone:'Automatic backup saved 💾',backupLast:'Last backup: ',backupNever:'Never backed up',backupNow:'Back up now',share:'Share',copied:'Note copied',themeAuto:'Light/dark follows the phone',privacy:'Privacy policy',dangerTitle:'My data',deleteHint:'Permanently delete all notes, your account and data on this device. This cannot be undone.',deleteAccount:'Delete account and all data',deleteConfirm1:'Permanently delete your account and all its notes?\nThis cannot be undone.',deleteConfirmLocal:'Permanently delete all notes on this device?\nThis cannot be undone.',deleteConfirm2:'Are you sure? Delete everything?',deleteOffline:'Connect to the internet to delete your account',deleting:'Deleting...',deleted:'All data deleted',deleteFailed:'Could not delete: ',draw:'Drawing',lockTitle:'Lock app with fingerprint',lockHint:'Use your fingerprint, face or screen lock to open the app',lockOn:'App lock on',lockOff:'App lock off',lockUnavailable:'Set up a fingerprint or screen lock on this phone first',toChecklist:'☑ Checklist',toText:'📝 Text',addItem:'Add item',itemPlaceholder:'Item',dailyTitle:'Daily diary reminder',dailyHint:'A reminder every day at this time, even when the app is closed',dailyOn:'On',dailySaved:'Daily reminder set for ',dailyOff:'Daily reminder turned off',sharedIn:'Added from share ✓',image:'Image',addImage:'Add image',takePhoto:'Take photo',imageWorking:'Resizing image...',imageTooBig:'This note is full of images. Remove some or start a new note',imageFailed:"Couldn't open this image",storageFull:'Device storage is full, so this note with images could not be saved. Sign in to sync, or remove some images'}
 };
 const nt=k=>(navI18n[language]||navI18n.en)[k]||navI18n.en[k];
 const noteSorters={
@@ -851,7 +869,7 @@ let sortBy=noteSorters[safeStorage.getItem('meow-sort')]?safeStorage.getItem('me
 let viewMode=safeStorage.getItem('meow-view')==='grid'?'grid':'list';
 function applyViewMode(){$('notes').className=viewMode;$('viewToggle').textContent=viewMode==='list'?'▦':'☰'}
 function updateFilterTag(){
- const parts=[];if(filter==='pinned')parts.push(nt('pinned'));if(filter==='trash')parts.push(nt('trash'));if(favoriteOnly)parts.push(nt('favorites'));
+ const parts=[];if(filter==='pinned')parts.push(nt('pinned'));if(filter==='trash')parts.push(nt('trash')+' · '+nt('trash30'));if(favoriteOnly)parts.push(nt('favorites'));
  const cat=$('categoryFilter').value;if(cat)parts.push('▣ '+cat);
  $('filterTag').hidden=!parts.length;$('filterTag').textContent=parts.join(' · ')+'  ×';
 }
@@ -898,7 +916,7 @@ applyViewMode();applyNavLanguage();
 var noteKind='text',nextNoteKind='text';
 function setNoteKind(kind){
  noteKind=kind==='checklist'?'checklist':'text';const list=noteKind==='checklist';
- $('checkMain').hidden=!list;$('noteRich').hidden=list;$('imageActions').hidden=list;$('checklistSection').hidden=list||!checkItems.length;
+ $('checkMain').hidden=!list;$('noteRich').hidden=list;$('addImage').hidden=list;$('takePhoto').hidden=list;$('checklistSection').hidden=list||!checkItems.length;
  $('kindToggle').textContent=list?nt('toText'):nt('toChecklist');
  if(list)drawCheckMain();
 }
@@ -941,6 +959,100 @@ if(window.MeowAndroid?.setAppLock){
  });
 }
 
+
+// ---- local notes, trash clean-up, repeating reminders ----
+function loadLocalNotes(){try{const l=JSON.parse(safeStorage.getItem('meow-local-notes')||'[]');return Array.isArray(l)?l:[]}catch{return []}}
+function noteText(n){return n.kind==='checklist'||(!n.body&&n.checklist?.length)?(n.checklist||[]).map(x=>(x.done?'☑ ':'☐ ')+x.text).join('\n'):stripImageTokens(n.body)}
+// Offer once per account to move notes written before signing in into the account.
+function offerLocalImport(user){
+ const local=loadLocalNotes();const key='meow-local-offered-'+user.uid;
+ if(!local.length||safeStorage.getItem(key))return;
+ safeStorage.setItem(key,'1');
+ setTimeout(()=>{
+  if(!confirm(nt('importLocal').replace('{n}',local.length)))return;
+  local.forEach(n=>{if(!n?.id)return;const {id,...data}=n;queueWrite(setDoc(doc(collection(db,'users',user.uid,'notes'),id),{...data,updatedAt:serverTimestamp()},{merge:true}))});
+  safeStorage.removeItem('meow-local-notes');toast(nt('imported'));
+ },600);
+}
+function nextOccurrence(at,repeat,now){
+ const d=new Date(at);let guard=0;
+ while(d.getTime()<=now&&guard++<2000){if(repeat==='daily')d.setDate(d.getDate()+1);else if(repeat==='weekly')d.setDate(d.getDate()+7);else if(repeat==='monthly')d.setMonth(d.getMonth()+1);else break}
+ return d.getTime();
+}
+var trashPurged;
+function purgeOldTrash(){
+ if(!trashPurged)trashPurged=new Set(); // render() can run before this block during start-up
+ const cutoff=Date.now()-30*864e5;
+ const old=notes.filter(n=>n.deletedAt&&new Date(n.deletedAt).getTime()<cutoff&&!trashPurged.has(n.id));
+ if(!old.length)return;
+ old.forEach(n=>trashPurged.add(n.id));
+ if(currentUser)old.forEach(n=>queueWrite(deleteDoc(doc(noteCollection(),n.id))));
+ else setTimeout(()=>{const ids=new Set(old.map(n=>n.id));notes=notes.filter(n=>!ids.has(n.id));persistLocalNotes(notes);render()},0);
+}
+// ---- voice typing ----
+function insertDictated(text){
+ text=String(text||'').trim();if(!text)return;
+ if(noteKind==='checklist'){const empty=checkItems.findIndex(x=>!String(x.text||'').trim());if(empty>=0)checkItems[empty].text=text;else checkItems.push({text,done:false});drawCheckMain();return}
+ rich.focus();const sel=getSelection();sel.removeAllRanges();
+ if(savedRange&&rich.contains(savedRange.startContainer))sel.addRange(savedRange);else{const r=document.createRange();r.selectNodeContents(rich);r.collapse(false);sel.addRange(r)}
+ const before=sel.anchorNode?.nodeType===3?sel.anchorNode.data.slice(0,sel.anchorOffset):'';
+ document.execCommand('insertText',false,(before&&!/\s$/.test(before)?' ':'')+text);
+ syncBodyFromRich();
+}
+window.meowDictationResult=(text,err)=>{$('dictate').classList.remove('listening');if(err){if(err!=='cancelled')toast(nt('dictateFailed'));return}insertDictated(text)};
+$('dictate').addEventListener('mousedown',e=>e.preventDefault()); // keep the caret in the note
+$('dictate').addEventListener('click',()=>{
+ const lang=language==='en'?'en-US':'th-TH';
+ if(window.MeowAndroid?.startDictation){$('dictate').classList.add('listening');window.MeowAndroid.startDictation(lang);return}
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast(nt('dictateUnsupported'));return}
+ const r=new SR();r.lang=lang;r.interimResults=false;r.maxAlternatives=1;$('dictate').classList.add('listening');
+ r.onresult=e=>window.meowDictationResult(e.results[0][0].transcript,null);
+ r.onerror=e=>window.meowDictationResult(null,e.error==='no-speech'||e.error==='aborted'?'cancelled':e.error);
+ r.onend=()=>$('dictate').classList.remove('listening');
+ try{r.start()}catch{$('dictate').classList.remove('listening')}
+});
+// ---- monthly summary ----
+var summaryMonth=new Date();
+function renderSummary(){
+ const y=summaryMonth.getFullYear(),m=summaryMonth.getMonth();
+ $('summaryHeading').textContent='📊 '+summaryMonth.toLocaleDateString(language==='th'?'th-TH':'en-US',{month:'long',year:'numeric'});
+ const live=notes.filter(n=>!n.deletedAt);
+ const inMonth=live.filter(n=>{const d=new Date(n.createdAt||n.updatedAt||0);return d.getFullYear()===y&&d.getMonth()===m});
+ const days=new Set(live.flatMap(n=>[n.createdAt,n.updatedAt].filter(Boolean).map(t=>dayKey(new Date(t)))));
+ const monthDays=[...days].filter(k=>k.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).sort();
+ let best=0,run=0,prev=null;for(const k of monthDays){const t=new Date(k+'T00:00').getTime();run=prev!==null&&t-prev<=864e5+36e5?run+1:1;best=Math.max(best,run);prev=t}
+ let now=0;for(let d=new Date();days.has(dayKey(d));d.setDate(d.getDate()-1))now++;
+ const items=inMonth.flatMap(n=>n.checklist||[]),done=items.filter(x=>x.done).length;
+ const pics=inMonth.reduce((t,n)=>t+(n.images?.length||0),0);
+ const moods={};inMonth.forEach(n=>{if(n.mood)moods[n.mood]=(moods[n.mood]||0)+1});
+ const moodList=Object.entries(moods).sort((a,b)=>b[1]-a[1]),maxMood=moodList[0]?.[1]||1;
+ const tile=(v,label)=>`<div class="sumTile"><b>${v}</b><span>${esc(label)}</span></div>`;
+ $('summaryBody').innerHTML=!inMonth.length&&!monthDays.length?`<p class="sumEmpty">🐾 ${esc(nt('sumEmpty'))}</p>`:
+  `<div class="sumGrid">${tile(inMonth.length,nt('sumNotes'))}${tile(monthDays.length,nt('sumDays'))}${tile(best+' '+nt('sumDaysUnit'),nt('sumStreak'))}${tile(now+' '+nt('sumDaysUnit'),nt('sumNow'))}${tile(items.length?done+'/'+items.length:'—',nt('sumDone'))}${tile(pics,nt('sumImages'))}</div>
+  <h3 class="sumH">${esc(nt('sumMoods'))}</h3>${moodList.length?moodList.map(([mo,c])=>`<div class="sumBar"><span>${mo}</span><i style="width:${Math.max(8,c/maxMood*100)}%"></i><b>${c}</b></div>`).join(''):`<p class="sumEmpty">${esc(nt('sumNoMood'))}</p>`}`;
+}
+$('openSummary').addEventListener('click',()=>{summaryMonth=new Date();renderSummary();$('summaryModal').classList.add('show')});
+$('summaryClose').addEventListener('click',()=>$('summaryModal').classList.remove('show'));
+$('sumPrev').addEventListener('click',()=>{summaryMonth.setMonth(summaryMonth.getMonth()-1);renderSummary()});
+$('sumNext').addEventListener('click',()=>{summaryMonth.setMonth(summaryMonth.getMonth()+1);renderSummary()});
+// ---- weekly automatic backup (Android app) ----
+function buildBackupPayload(){return {app:'Meow Diary',schemaVersion:1,exportedAt:new Date().toISOString(),notes,moods:JSON.parse(safeStorage.getItem('meow-moods')||'{}'),pet,missions:missionState(),settings:{language:safeStorage.getItem('note-language')||'th',dark:safeStorage.getItem('note-dark'),colorConfig:safeStorage.getItem('note-color-config'),noteColors:safeStorage.getItem('note-custom-note-colors')}}}
+function showBackupLast(){const t=Number(safeStorage.getItem('meow-backup-last')||0);$('backupLastText').textContent=t?nt('backupLast')+new Date(t).toLocaleString(language==='th'?'th-TH':'en-US'):nt('backupNever')}
+function runBackup(announce){
+ if(!notes.length)return false;
+ let ok=false;try{ok=!!window.MeowAndroid.saveBackup(`meow-diary-backup-${todayKey()}.json`,JSON.stringify(buildBackupPayload()))}catch{}
+ if(ok){safeStorage.setItem('meow-backup-last',String(Date.now()));showBackupLast();if(announce)toast(nt('backupDone'))}
+ return ok;
+}
+if(window.MeowAndroid?.saveBackup){
+ $('autoBackupSection').hidden=false;
+ const on=()=>safeStorage.getItem('meow-backup-auto')!=='0';
+ $('autoBackupOn').checked=on();showBackupLast();
+ $('autoBackupOn').addEventListener('change',e=>safeStorage.setItem('meow-backup-auto',e.target.checked?'1':'0'));
+ $('backupNowBtn').addEventListener('click',()=>{if(!runBackup(true))toast(nt('sumEmpty'))});
+ // Give cloud notes a few seconds to arrive, then back up if the last one is a week old.
+ setTimeout(()=>{if(on()&&Date.now()-Number(safeStorage.getItem('meow-backup-last')||0)>7*864e5)runBackup(true)},8000);
+}
 // ---- Share a note to other apps ----
 function noteShareText(){
  const title=$('noteTitle').value.trim();
@@ -988,13 +1100,14 @@ $('deleteAccount').addEventListener('click',async()=>{
 // var: render() may run before this block during start-up.
 var lastNativeSchedule='',pendingOpenNoteId=null,nativeScheduleTimer=null;
 function afterNotesChanged(){
+ purgeOldTrash();
  if(pendingOpenNoteId){const n=notes.find(x=>x.id===pendingOpenNoteId);if(n){pendingOpenNoteId=null;setTimeout(()=>openEditor(n),0)}}
  if(!window.MeowAndroid?.scheduleReminders)return;
  clearTimeout(nativeScheduleTimer);
  nativeScheduleTimer=setTimeout(()=>{
   const now=Date.now();
-  const list=notes.filter(n=>n.reminderAt&&!n.deletedAt&&new Date(n.reminderAt).getTime()>now)
-   .map(n=>({id:n.id,title:n.title||'',body:stripImageTokens(n.body).slice(0,240),at:new Date(n.reminderAt).getTime()}));
+  const list=notes.filter(n=>n.reminderAt&&!n.deletedAt).map(n=>{let at=new Date(n.reminderAt).getTime();if(n.reminderRepeat&&at<=now)at=nextOccurrence(at,n.reminderRepeat,now);
+   return {id:n.id,title:n.title||'',body:noteText(n).slice(0,240),at,repeat:n.reminderRepeat||''}}).filter(x=>x.at>now);
   const json=JSON.stringify(list);
   if(json!==lastNativeSchedule){lastNativeSchedule=json;try{window.MeowAndroid.scheduleReminders(json)}catch{}}
  },400);
@@ -1320,6 +1433,7 @@ if(configured){
    $('accountHint').textContent=user?(user.email||'เข้าสู่ระบบแล้ว'):'เข้าสู่ระบบเพื่อซิงก์โน้ตของคุณ';
    $('avatar').textContent=user?(user.displayName||user.email||'G').slice(0,1).toUpperCase():'N';
    $('notice').textContent=user?'โน้ตของคุณเชื่อมกับบัญชีนี้และซิงก์ผ่าน Cloud Firestore':'เข้าสู่ระบบเพื่อซิงก์โน้ตข้ามอุปกรณ์ (ไม่ล็อกอินก็ใช้ได้ โน้ตจะเก็บในเครื่องนี้)';
+   if(user)offerLocalImport(user);
    watchNotes();
   });
  }catch(e){$('notice').textContent='ตั้งค่า Firebase ไม่ถูกต้อง: '+e.message}
@@ -1345,9 +1459,9 @@ $('missionList').addEventListener('click',e=>{const b=e.target.closest('[data-mi
 $('openMoodStats').addEventListener('click',()=>{const moods=JSON.parse(safeStorage.getItem('meow-moods')||'{}'),entries=Object.values(moods),counts={};entries.forEach(x=>{const k=x.mood||'—';counts[k]=(counts[k]||0)+1});const labels={'😊':et('moodHappy'),'😌':et('moodCalm'),'😐':et('moodNeutral'),'😔':et('moodSad'),'😤':et('moodStressed'),'🤩':et('moodExcited'),'💗':et('moodWarm'),'😴':et('moodTired')};const max=Math.max(1,...Object.values(counts));$('statsTiles').innerHTML=`<div class="statTile"><strong>${entries.length}</strong><span>${esc(et('days'))}</span></div><div class="statTile"><strong>${Object.keys(counts).length?esc(labels[Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0]]||Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0]):'—'}</strong><span>${esc(et('mostMood'))}</span></div>`;$('moodBars').innerHTML=entries.length?Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([m,n])=>`<div class="moodBarRow"><span>${esc(labels[m]||m)}</span><div class="moodBarTrack"><div class="moodBarFill" style="width:${n/max*100}%"></div></div><b>${n}</b></div>`).join(''):`<p>${esc(et('noMoodData'))}</p>`;$('statsModal').classList.add('show')});
 $('statsClose').onclick=()=>$('statsModal').classList.remove('show');
 $('openBackup').onclick=()=>{$('backupStatus').textContent='';$('backupModal').classList.add('show')};$('backupClose').onclick=()=>$('backupModal').classList.remove('show');
-$('exportBackup').onclick=()=>{const payload={app:'Meow Diary',schemaVersion:1,exportedAt:new Date().toISOString(),notes:currentUser?notes:[],moods:JSON.parse(safeStorage.getItem('meow-moods')||'{}'),pet,missions:missionState(),settings:{language:safeStorage.getItem('note-language')||'th',dark:safeStorage.getItem('note-dark'),colorConfig:safeStorage.getItem('note-color-config'),noteColors:safeStorage.getItem('note-custom-note-colors')}};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`meow-diary-backup-${todayKey()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('backupStatus').textContent=et('backupReady')};
+$('exportBackup').onclick=()=>{const payload={app:'Meow Diary',schemaVersion:1,exportedAt:new Date().toISOString(),notes,moods:JSON.parse(safeStorage.getItem('meow-moods')||'{}'),pet,missions:missionState(),settings:{language:safeStorage.getItem('note-language')||'th',dark:safeStorage.getItem('note-dark'),colorConfig:safeStorage.getItem('note-color-config'),noteColors:safeStorage.getItem('note-custom-note-colors')}};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`meow-diary-backup-${todayKey()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('backupStatus').textContent=et('backupReady')};
 $('importBackupBtn').onclick=()=>$('backupFile').click();
-$('backupFile').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());if(payload.app!=='Meow Diary'||payload.schemaVersion!==1)throw Error('schema');if(!confirm(et('confirmRestore')))return;let skippedNotes=false;if(Array.isArray(payload.notes)&&payload.notes.length){if(!currentUser||!db){skippedNotes=true}else{for(const n of payload.notes){if(!n.id)continue;const {id,...data}=n;queueWrite(setDoc(doc(noteCollection(),id),{...data,updatedAt:serverTimestamp()},{merge:true}))}}}if(payload.moods&&typeof payload.moods==='object')safeStorage.setItem('meow-moods',JSON.stringify(payload.moods));if(payload.pet&&typeof payload.pet==='object'){pet={...pet,...payload.pet};savePet()}if(payload.missions)safeStorage.setItem(MISSION_KEY,JSON.stringify(payload.missions));if(payload.settings){if(payload.settings.language&&extraI18n[payload.settings.language]){language=payload.settings.language;safeStorage.setItem('note-language',language);$('languageSelect').value=language}for(const [k,store] of [['dark','note-dark'],['colorConfig','note-color-config'],['noteColors','note-custom-note-colors']])if(payload.settings[k]!==undefined&&payload.settings[k]!==null)safeStorage.setItem(store,payload.settings[k]);if(payload.settings.colorConfig){try{applyColorConfig(JSON.parse(payload.settings.colorConfig),false)}catch{}}if(payload.settings.dark!==undefined)document.body.classList.toggle('dark',payload.settings.dark==='1')}applyLanguage();if(currentUser)watchNotes();renderPet();$('backupStatus').textContent=skippedNotes?et('restorePartial'):et('restoreDone')}catch(err){$('backupStatus').textContent=et('badBackup')}finally{e.target.value=''}});
+$('backupFile').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());if(payload.app!=='Meow Diary'||payload.schemaVersion!==1)throw Error('schema');if(!confirm(et('confirmRestore')))return;let skippedNotes=false;if(Array.isArray(payload.notes)&&payload.notes.length){if(!currentUser||!db){const byId=new Map(loadLocalNotes().map(n=>[n.id,n]));payload.notes.forEach(n=>{if(n?.id)byId.set(n.id,n)});const merged=[...byId.values()];if(persistLocalNotes(merged)){notes=merged;render()}else skippedNotes=true}else{for(const n of payload.notes){if(!n.id)continue;const {id,...data}=n;queueWrite(setDoc(doc(noteCollection(),id),{...data,updatedAt:serverTimestamp()},{merge:true}))}}}if(payload.moods&&typeof payload.moods==='object')safeStorage.setItem('meow-moods',JSON.stringify(payload.moods));if(payload.pet&&typeof payload.pet==='object'){pet={...pet,...payload.pet};savePet()}if(payload.missions)safeStorage.setItem(MISSION_KEY,JSON.stringify(payload.missions));if(payload.settings){if(payload.settings.language&&extraI18n[payload.settings.language]){language=payload.settings.language;safeStorage.setItem('note-language',language);$('languageSelect').value=language}for(const [k,store] of [['dark','note-dark'],['colorConfig','note-color-config'],['noteColors','note-custom-note-colors']])if(payload.settings[k]!==undefined&&payload.settings[k]!==null)safeStorage.setItem(store,payload.settings[k]);if(payload.settings.colorConfig){try{applyColorConfig(JSON.parse(payload.settings.colorConfig),false)}catch{}}if(payload.settings.dark!==undefined)document.body.classList.toggle('dark',payload.settings.dark==='1')}applyLanguage();if(currentUser)watchNotes();renderPet();$('backupStatus').textContent=skippedNotes?et('restorePartial'):et('restoreDone')}catch(err){$('backupStatus').textContent=et('badBackup')}finally{e.target.value=''}});
 $('openWidget').onclick=()=>{$('widgetModal').classList.add('show');renderPet()};$('widgetClose').onclick=()=>$('widgetModal').classList.remove('show');$('widgetWrite').onclick=()=>{$('widgetModal').classList.remove('show');openEditor()};
 // Update cat care values gently over time, without creating pressure or penalties.
 function applyPetDailyDrift(){const d=todayKey();if(pet.lastDay!==d){pet.hunger=Math.max(25,pet.hunger-5);pet.happiness=Math.max(25,pet.happiness-3);pet.lastDay=d;savePet()}}
@@ -1424,7 +1538,7 @@ applyLanguage=function(){_applyLanguageWithAi();applyAiPopupLanguage()};
 
 applyLanguage();
 initColorStudio();
-try{if(!currentUser){notes=JSON.parse(safeStorage.getItem('meow-local-notes')||'[]');render();$('syncStatus').textContent='บันทึกในอุปกรณ์นี้'}}catch{notes=[];render()}
+if(!currentUser){notes=loadLocalNotes();render();$('syncStatus').textContent=nt('onDevice')}
 lockApp();
 </script>
 <script>if('serviceWorker' in navigator&&location.protocol!=='file:'){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>

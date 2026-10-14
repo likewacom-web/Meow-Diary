@@ -10,4 +10,9 @@
     <string name="shortcutNote">โน้ตใหม่</string>
     <string name="shortcutChecklist">เช็กลิสต์ใหม่</string>
     <string name="shortcutPhoto">ถ่ายรูปจด</string>
+    <string name="widgetCatName">น้องเหมียว</string>
+    <string name="widgetHunger">🍓 ความอิ่ม %1$d%%</string>
+    <string name="widgetHappy">💗 ความสุข %1$d%%</string>
+    <string name="widgetDescription">น้องเหมียวกับปุ่มเขียนโน้ต</string>
+    <string name="dictationPrompt">พูดสิ่งที่อยากจดได้เลย 🐱</string>
 </resources>

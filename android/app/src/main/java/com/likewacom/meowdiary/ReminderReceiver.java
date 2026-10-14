@@ -16,6 +16,7 @@ public class ReminderReceiver extends BroadcastReceiver {
             Reminders.show(c, id == null ? 2 : id.hashCode(),
                     title == null || title.isEmpty() ? c.getString(R.string.noteReminderTitle) : title,
                     body == null || body.isEmpty() ? c.getString(R.string.noteReminderBody) : body, id);
+            Reminders.rescheduleAll(c); // books the next time of a repeating reminder
         } else if (Reminders.ACTION_DAILY.equals(action)) {
             Reminders.show(c, 1, c.getString(R.string.dailyTitle), c.getString(R.string.dailyBody), null);
             Reminders.rescheduleAll(c); // books tomorrow's daily reminder

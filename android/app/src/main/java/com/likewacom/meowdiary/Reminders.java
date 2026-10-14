@@ -68,18 +68,37 @@ final class Reminders {
         for (String id : p.getStringSet("scheduled", new HashSet<>())) am.cancel(notePending(c, id, "", ""));
         Set<String> scheduled = new HashSet<>();
         long now = System.currentTimeMillis();
+        JSONArray list = new JSONArray();
         try {
-            JSONArray list = new JSONArray(p.getString("notes", "[]"));
+            list = new JSONArray(p.getString("notes", "[]"));
             for (int i = 0; i < list.length(); i++) {
                 JSONObject n = list.getJSONObject(i);
                 long at = n.optLong("at");
                 String id = n.optString("id");
+                String repeat = n.optString("repeat");
+                if (at <= now && !repeat.isEmpty()) {
+                    at = nextOccurrence(at, repeat, now);
+                    n.put("at", at); // remember the advanced time
+                }
                 if (id.isEmpty() || at <= now) continue;
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, notePending(c, id, n.optString("title"), n.optString("body")));
                 scheduled.add(id);
             }
         } catch (Exception ignored) { }
-        p.edit().putStringSet("scheduled", scheduled).apply();
+        p.edit().putStringSet("scheduled", scheduled).putString("notes", list.toString()).apply();
+    }
+
+    /** The first daily / weekly / monthly repeat of {@code at} that is after {@code now}. */
+    static long nextOccurrence(long at, String repeat, long now) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(at);
+        for (int guard = 0; c.getTimeInMillis() <= now && guard < 2000; guard++) {
+            if ("daily".equals(repeat)) c.add(Calendar.DAY_OF_YEAR, 1);
+            else if ("weekly".equals(repeat)) c.add(Calendar.DAY_OF_YEAR, 7);
+            else if ("monthly".equals(repeat)) c.add(Calendar.MONTH, 1);
+            else break;
+        }
+        return c.getTimeInMillis();
     }
 
     private static void scheduleDaily(Context c) {

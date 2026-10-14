@@ -24,6 +24,9 @@ import android.widget.TextView;
 import android.print.PrintAttributes;
 import android.print.PrintManager;
 import android.provider.MediaStore;
+import android.speech.RecognizerIntent;
+import android.content.ContentValues;
+import android.os.Environment;
 import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
@@ -143,6 +146,17 @@ public class MainActivity extends AppCompatActivity {
                 });
             });
 
+    // Voice typing through the phone's speech recogniser.
+    private final ActivityResultLauncher<Intent> dictationLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                String text = null;
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    ArrayList<String> found = result.getData().getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    if (found != null && !found.isEmpty()) text = found.get(0);
+                }
+                callPage("meowDictationResult", (text == null ? "null" : JSONObject.quote(text)) + "," + (text == null ? "\"cancelled\"" : "null"));
+            });
+
     private final ActivityResultLauncher<String> micPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), granted -> {
                 if (pendingWebPermission == null) return;
@@ -186,6 +200,7 @@ public class MainActivity extends AppCompatActivity {
         s.setAllowFileAccess(false);
         s.setUserAgentString(s.getUserAgentString() + " MeowDiaryApp/1");
         web.addJavascriptInterface(new Bridge(), "MeowAndroid");
+        web.addJavascriptInterface(new WidgetBridge(), "MeowDiaryAndroid");
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -291,6 +306,47 @@ public class MainActivity extends AppCompatActivity {
             photoLauncher.launch(shortcutPhotoUri);
         } catch (Exception e) {
             shortcutPhotoUri = null;
+        }
+    }
+
+    private void startDictation(String lang) {
+        Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
+                .putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.dictationPrompt));
+        try {
+            dictationLauncher.launch(i);
+        } catch (ActivityNotFoundException e) {
+            callPage("meowDictationResult", "null,\"unavailable\"");
+        }
+    }
+
+    /** Writes a backup JSON to Download/MeowDiary (no storage permission needed). */
+    private boolean saveBackup(String fileName, String json) {
+        try {
+            byte[] bytes = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+                v.put(MediaStore.Downloads.MIME_TYPE, "application/json");
+                v.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/MeowDiary");
+                Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                if (uri == null) return false;
+                try (java.io.OutputStream out = getContentResolver().openOutputStream(uri)) {
+                    if (out == null) return false;
+                    out.write(bytes);
+                }
+            } else {
+                File dir = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "MeowDiary");
+                //noinspection ResultOfMethodCallIgnored
+                dir.mkdirs();
+                try (java.io.FileOutputStream out = new java.io.FileOutputStream(new File(dir, fileName))) {
+                    out.write(bytes);
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -513,6 +569,8 @@ public class MainActivity extends AppCompatActivity {
             if (Build.VERSION.SDK_INT >= 33 && !Reminders.canNotify(MainActivity.this))
                 runOnUiThread(() -> notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS));
         }
+        @JavascriptInterface public void startDictation(String lang) { runOnUiThread(() -> MainActivity.this.startDictation(lang)); }
+        @JavascriptInterface public boolean saveBackup(String fileName, String json) { return MainActivity.this.saveBackup(fileName, json); }
         @JavascriptInterface public void shareText(String title, String text) { runOnUiThread(() -> MainActivity.this.shareText(title, text)); }
         @JavascriptInterface public boolean appLockAvailable() { return lockAvailable(); }
         @JavascriptInterface public boolean getAppLock() { return lockEnabled(); }
@@ -524,6 +582,14 @@ public class MainActivity extends AppCompatActivity {
                 int color = Color.parseColor(hex);
                 runOnUiThread(() -> applyThemeColor(color));
             } catch (IllegalArgumentException ignored) { }
+        }
+    }
+
+    /** The page already calls window.MeowDiaryAndroid.updateCatWidget(...) when the cat changes. */
+    private class WidgetBridge {
+        @JavascriptInterface
+        public void updateCatWidget(String name, int level, int coins, int hunger, int happiness) {
+            CatWidget.save(MainActivity.this, name, level, coins, hunger, happiness);
         }
     }
 
