@@ -1,3 +1,4 @@
 <resources>
     <string name="appName">เหมียวไดอารี่</string>
+    <string name="reminderChannel">แจ้งเตือนโน้ต</string>
 </resources>

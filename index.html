@@ -534,7 +534,7 @@ const safeStorage = (() => {
 })();
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, reauthenticateWithPopup } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, onAuthStateChanged, signOut, reauthenticateWithPopup } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
 
@@ -568,6 +568,25 @@ const offlineI18n={
  id:{offline:'○ Offline • tersimpan di perangkat',pending:'◌ Menunggu sinkron',savedOffline:'Tersimpan di perangkat, akan disinkron saat online ✓',attachOffline:'Offline: teks tersimpan, lampiran diunggah saat online',backOnline:'Kembali online, menyinkronkan...'},
  vi:{offline:'○ Ngoại tuyến • đã lưu trên máy',pending:'◌ Đang chờ đồng bộ',savedOffline:'Đã lưu trên máy, sẽ đồng bộ khi có mạng ✓',attachOffline:'Ngoại tuyến: đã lưu văn bản, tệp đính kèm cần tải lên khi có mạng',backOnline:'Đã có mạng, đang đồng bộ...'},
  hi:{offline:'○ ऑफ़लाइन • इस डिवाइस पर सहेजा गया',pending:'◌ सिंक की प्रतीक्षा',savedOffline:'डिवाइस पर सहेजा गया, ऑनलाइन होने पर सिंक होगा ✓',attachOffline:'ऑफ़लाइन: टेक्स्ट सहेजा गया, अटैचमेंट ऑनलाइन होने पर अपलोड करें',backOnline:'फिर से ऑनलाइन, सिंक हो रहा है...'}
+};
+// Android app: reminders go through native notifications (WebView has no Notification API).
+if(window.MeowAndroid&&!('Notification' in window)){
+ window.Notification=class{
+  constructor(title,opts={}){try{window.MeowAndroid.notify(String(title||''),String(opts.body||''))}catch{}}
+  static get permission(){try{return window.MeowAndroid.notificationPermission()}catch{return 'denied'}}
+  static requestPermission(){try{window.MeowAndroid.requestNotificationPermission()}catch{}return Promise.resolve(window.Notification.permission)}
+ };
+}
+// Android back button: close whatever is open before leaving the app.
+window.meowHandleBack=()=>{
+ const shown=sel=>document.querySelector(sel+'.show');
+ if(shown('#imgViewer')){$('imgViewer').classList.remove('show');return true}
+ for(const id of ['addSheet','menuSheet'])if(shown('#'+id)){closeSheet(id);return true}
+ if(shown('#overlay')){closeEditor();return true}
+ for(const sel of ['#aiOverlay','#languageOverlay','#settingsOverlay','.calendarModal']){const el=shown(sel);if(el){el.classList.remove('show');document.body.style.overflow='';return true}}
+ if(!$('petView').hidden){showTab('notes');return true}
+ if(!$('searchWrap').hidden){$('searchClose').click();return true}
+ return false;
 };
 const ot=k=>(offlineI18n[language]||offlineI18n.en)[k]||offlineI18n.en[k];
 let lastSnapMeta=null;
@@ -772,7 +791,7 @@ function applyColorConfig(cfg,save=true){
  document.body.classList.toggle('dark',darkBg);
  document.body.style.setProperty('--bg',cfg.bg);document.body.style.setProperty('--purple',cfg.accent);document.body.style.setProperty('--ink',cfg.ink);
  colors=[...cfg.notes];document.body.style.setProperty('--lav',colors[0]);document.body.style.setProperty('--mint',colors[1]);document.body.style.setProperty('--peach',colors[2]);document.body.style.setProperty('--yellow',colors[3]);document.body.style.setProperty('--pink',colors[4]);
- document.querySelector('meta[name="theme-color"]')?.setAttribute('content',cfg.bg);
+ document.querySelector('meta[name="theme-color"]')?.setAttribute('content',cfg.bg);try{window.MeowAndroid?.setThemeColor(cfg.bg)}catch{}
  if(save){safeStorage.setItem('note-color-config',JSON.stringify(cfg));safeStorage.setItem('note-custom-note-colors',JSON.stringify(colors))}
  document.querySelectorAll('.swatch').forEach((b,i)=>{if(colors[i])b.style.background=colors[i]});
  $('appBgColor').value=cfg.bg;$('appAccentColor').value=cfg.accent;$('appInkColor').value=cfg.ink;
@@ -945,6 +964,7 @@ $('viewToggle').addEventListener('click',()=>{viewMode=viewMode==='list'?'grid':
 $('filterTag').addEventListener('click',()=>{filter='all';favoriteOnly=false;$('categoryFilter').value='';document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));applyLanguage();render()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.sheetOverlay.show').forEach(o=>closeSheet(o.id))});
 applyViewMode();applyNavLanguage();
+if(window.MeowAndroid){$('driveAttachmentLabel').style.display='none';$('connectDriveBtn').parentElement.style.display='none'}
 
 // ---- Images inside the note text ----
 // The body text stays plain: each image sits on its own line as [[img:id]],
@@ -1134,7 +1154,7 @@ $('newCategory').addEventListener('click',()=>{const name=prompt('ชื่อ�
 $('themeToggle').addEventListener('click',()=>{const dark=!document.body.classList.contains('dark');document.body.classList.toggle('dark',dark);safeStorage.setItem('note-dark',dark?'1':'0');$('themeToggle').textContent=dark?'☀️ ธีมสว่าง':'🌙 ธีมมืด';const cfg=JSON.parse(safeStorage.getItem('note-color-config')||'null')||colorPresets.lavender;const next={...cfg,bg:dark?'#211f29':'#fdf9ff',accent:dark?'#b8a5f2':cfg.accent,ink:dark?'#f2edf7':colorPresets.lavender.ink,notes:dark?colorPresets.night.notes:(cfg.notes||[]).every(c=>!isDarkHex(c))?cfg.notes:colorPresets.lavender.notes};applyColorConfig(next,true)});
 if(safeStorage.getItem('note-dark')==='1'){document.body.classList.add('dark');$('themeToggle').textContent='☀️ ธีมสว่าง'}
 $('exportTxt').addEventListener('click',()=>{const rows=notes.filter(n=>!n.deletedAt).map(n=>`${n.title||'ไม่มีชื่อ'}\n${n.category?'หมวดหมู่: '+n.category+'\n':''}${stripImageTokens(n.body,'[รูป]')}\n${(n.checklist||[]).map(x=>`${x.done?'[x]':'[ ]'} ${x.text}`).join('\n')}\n`).join('\n---\n\n');downloadText(rows,'note-export.txt','text/plain;charset=utf-8')});
-$('exportPdf').addEventListener('click',()=>{const printable=notes.filter(n=>!n.deletedAt);const w=window.open('','_blank');if(!w){toast('อนุญาตป๊อปอัปเพื่อส่งออก PDF');return}w.document.write(`<html><head><title>เหมียวไดอารี่ — ส่งออก</title><meta charset="utf-8"><style>body{font-family:system-ui,sans-serif;padding:28px;color:#302b37}article{break-inside:avoid;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:24px}h2{font-size:18px}pre{white-space:pre-wrap;font:inherit}</style></head><body><h1>เหมียวไดอารี่ — ส่งออก</h1>${printable.map(n=>`<article><h2>${esc(n.title||'ไม่มีชื่อ')}</h2><p>${esc(n.category||'')}</p><pre>${bodyToHtml(n)}</pre>${(n.checklist||[]).map(x=>`<p>${x.done?'☑':'☐'} ${esc(x.text)}</p>`).join('')}</article>`).join('')}<script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()});
+$('exportPdf').addEventListener('click',()=>{const printable=notes.filter(n=>!n.deletedAt);const html=(`<html><head><title>เหมียวไดอารี่ — ส่งออก</title><meta charset="utf-8"><style>body{font-family:system-ui,sans-serif;padding:28px;color:#302b37}article{break-inside:avoid;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:24px}h2{font-size:18px}pre{white-space:pre-wrap;font:inherit}</style></head><body><h1>เหมียวไดอารี่ — ส่งออก</h1>${printable.map(n=>`<article><h2>${esc(n.title||'ไม่มีชื่อ')}</h2><p>${esc(n.category||'')}</p><pre>${bodyToHtml(n)}</pre>${(n.checklist||[]).map(x=>`<p>${x.done?'☑':'☐'} ${esc(x.text)}</p>`).join('')}</article>`).join('')}<script>window.onload=()=>window.print()<\/script></body></html>`);if(window.MeowAndroid){window.MeowAndroid.printHtml(html);return}const w=window.open('','_blank');if(!w){toast('อนุญาตป๊อปอัปเพื่อส่งออก PDF');return}w.document.write(html);w.document.close()});
 function downloadText(content,name,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
 $('aiSummary').addEventListener('click',()=>{const text=stripImageTokens($('noteBody').value);if(!text){$('aiResult').textContent='เพิ่มเนื้อหาโน้ตก่อน';return}const sentences=text.split(/(?<=[.!?。！？\n])\s+/).filter(Boolean);const summary=sentences.length>3?sentences.slice(0,3).join(' '):text;$('aiResult').textContent='สรุป: '+summary;});
 
@@ -1191,11 +1211,21 @@ function lockApp(){if(!safeStorage.getItem('note-pin-hash')||sessionStorage.getI
 
 if('Notification'in window && Notification.permission==='default'){/* ask only when user opts in */}
 
+// In the Android app the page runs in a WebView, where Google blocks its sign-in
+// page; the app signs in natively and hands back a Google ID token instead.
+let nativeSignInWaiter=null;
+window.meowNativeSignInResult=(token,err)=>{const w=nativeSignInWaiter;nativeSignInWaiter=null;if(w){if(err)w.reject(new Error(err));else w.resolve(token)}};
+async function nativeGoogleSignIn(){
+ try{const token=await new Promise((resolve,reject)=>{nativeSignInWaiter={resolve,reject};window.MeowAndroid.signInWithGoogle()});
+  await signInWithCredential(auth,GoogleAuthProvider.credential(token))}
+ catch(e){if(e.message!=='cancelled')toast('เข้าสู่ระบบไม่สำเร็จ: '+e.message)}
+}
 $('googleSignIn').addEventListener('click',async()=>{
+ if(window.MeowAndroid&&configured){nativeGoogleSignIn();return}
  if(!configured){toast('ต้องใส่ Firebase config ใน index.html ก่อน');$('notice').textContent='เปิด SETUP.md แล้วทำตามขั้นตอน จากนั้นใส่ค่าจาก Firebase Web App ลงใน firebaseConfig';return}
  try{const provider=new GoogleAuthProvider();provider.addScope('https://www.googleapis.com/auth/drive.file');const result=await signInWithPopup(auth,provider);captureDriveToken(result)}catch(e){if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e.code)){try{await signInWithRedirect(auth,new GoogleAuthProvider())}catch(err){toast(err.message)}}else toast('เข้าสู่ระบบไม่สำเร็จ: '+e.message)}
 });
-$('googleSignOut').addEventListener('click',()=>{clearDriveToken();signOut(auth).catch(e=>toast(e.message))});
+$('googleSignOut').addEventListener('click',()=>{clearDriveToken();try{window.MeowAndroid?.signOut()}catch{}signOut(auth).catch(e=>toast(e.message))});
 $('connectDriveBtn').addEventListener('click',connectGoogleDrive);
 
 $('languageSelect').value=language;

@@ -1,7 +1,17 @@
 # เหมียวไดอารี่ บน Play Store
 
-แอป Android นี้เป็น Trusted Web Activity (TWA): เปิดเว็บ
-https://likewacom-web.github.io/Meow-Diary/ แบบเต็มจอผ่าน Chrome
+แอป Android นี้แสดงเว็บ https://likewacom-web.github.io/Meow-Diary/
+ใน WebView ของแอปเอง (ไม่ผ่าน Chrome) และล็อกอิน Google ด้วยระบบของ Android
+(Credential Manager) แล้วส่ง ID token ให้ Firebase ในหน้าเว็บ
+
+### ตั้งค่าครั้งเดียวให้ล็อกอิน Google ในแอปได้
+Firebase console → Project settings → Your apps → Add app → Android
+- Package name: `com.likewacom.meowdiary`
+- เพิ่ม SHA-1 ทั้งสองตัว (Add fingerprint):
+  - กุญแจทดสอบ: `8B:72:93:C8:3C:67:95:A7:40:71:6A:DC:1C:63:64:84:4E:53:67:FE`
+  - กุญแจ upload: `48:BD:E0:43:7A:28:9C:53:1D:7A:85:19:F2:A8:06:8A:D5:23:B0:42`
+  - หลังขึ้น Play Store: เพิ่ม SHA-1 ของ App signing key จาก Play Console ด้วย
+- ไม่ต้องดาวน์โหลด google-services.json
 แก้เว็บ (`index.html`) แล้วแอปจะอัปเดตตามทันที ไม่ต้องส่งแอปใหม่
 
 ## 1. ใส่กุญแจเซ็นแอปใน GitHub (ครั้งเดียว)

@@ -1,0 +1,365 @@
+package com.likewacom.meowdiary;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.print.PrintAttributes;
+import android.print.PrintManager;
+import android.provider.MediaStore;
+import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+
+import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.credentials.ClearCredentialStateRequest;
+import androidx.credentials.Credential;
+import androidx.credentials.CredentialManager;
+import androidx.credentials.CredentialManagerCallback;
+import androidx.credentials.CustomCredential;
+import androidx.credentials.GetCredentialRequest;
+import androidx.credentials.GetCredentialResponse;
+import androidx.credentials.exceptions.ClearCredentialException;
+import androidx.credentials.exceptions.GetCredentialCancellationException;
+import androidx.credentials.exceptions.GetCredentialException;
+
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
+
+import org.json.JSONObject;
+
+import java.io.File;
+import java.util.concurrent.Executor;
+
+/**
+ * Meow Diary as a native app: the web app runs inside this app's own WebView
+ * (no Chrome UI), and Google sign-in uses Android's Credential Manager because
+ * Google blocks its sign-in page inside WebViews.
+ */
+public class MainActivity extends AppCompatActivity {
+    private static final String CHANNEL_ID = "reminders";
+
+    private WebView web;
+    private FrameLayout root;
+    private String home;
+    private String siteHost;
+    private CredentialManager credentialManager;
+    private Executor mainExecutor;
+
+    private ValueCallback<Uri[]> fileCallback;
+    private Uri cameraUri;
+    private PermissionRequest pendingWebPermission;
+    private WebView printView; // kept alive until printing has started
+
+    private final ActivityResultLauncher<Intent> fileLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (fileCallback == null) return;
+                Uri[] uris = null;
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    if (cameraUri != null) {
+                        uris = new Uri[]{cameraUri};
+                    } else if (result.getData() != null) {
+                        Intent data = result.getData();
+                        ClipData clip = data.getClipData();
+                        if (clip != null) {
+                            uris = new Uri[clip.getItemCount()];
+                            for (int i = 0; i < clip.getItemCount(); i++) uris[i] = clip.getItemAt(i).getUri();
+                        } else if (data.getData() != null) {
+                            uris = new Uri[]{data.getData()};
+                        }
+                    }
+                }
+                fileCallback.onReceiveValue(uris);
+                fileCallback = null;
+                cameraUri = null;
+            });
+
+    private final ActivityResultLauncher<String> micPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                if (pendingWebPermission == null) return;
+                if (granted) pendingWebPermission.grant(pendingWebPermission.getResources());
+                else pendingWebPermission.deny();
+                pendingWebPermission = null;
+            });
+
+    private final ActivityResultLauncher<String> notificationPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> { });
+
+    @SuppressLint("SetJavaScriptEnabled")
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        home = getString(R.string.launchUrl);
+        siteHost = getString(R.string.hostName);
+        credentialManager = CredentialManager.create(this);
+        mainExecutor = ContextCompat.getMainExecutor(this);
+
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        root = new FrameLayout(this);
+        root.setBackgroundColor(ContextCompat.getColor(this, R.color.themeColor));
+        web = new WebView(this);
+        root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        setContentView(root);
+        // Keep content clear of the status bar, navigation bar and keyboard.
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            v.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, ime.bottom));
+            return WindowInsetsCompat.CONSUMED;
+        });
+        applyThemeColor(ContextCompat.getColor(this, R.color.themeColor));
+
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setAllowFileAccess(false);
+        s.setUserAgentString(s.getUserAgentString() + " MeowDiaryApp/1");
+        web.addJavascriptInterface(new Bridge(), "MeowAndroid");
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                if (isAppUrl(uri)) return false;
+                openExternally(uri);
+                return true;
+            }
+        });
+        web.setWebChromeClient(new ChromeClient());
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                // Let the page close its editor / sheets first.
+                web.evaluateJavascript("(window.meowHandleBack&&window.meowHandleBack())||false", value -> {
+                    if ("true".equals(value)) return;
+                    if (web.canGoBack()) web.goBack();
+                    else finish();
+                });
+            }
+        });
+
+        if (savedInstanceState != null) web.restoreState(savedInstanceState);
+        else web.loadUrl(startUrl(getIntent()));
+    }
+
+    @Override
+    protected void onNewIntent(@NonNull Intent intent) {
+        super.onNewIntent(intent);
+        Uri data = intent.getData();
+        if (data != null && isAppUrl(data)) web.loadUrl(data.toString());
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        web.saveState(outState);
+    }
+
+    private String startUrl(Intent intent) {
+        Uri data = intent != null ? intent.getData() : null;
+        return data != null && isAppUrl(data) ? data.toString() : home;
+    }
+
+    private boolean isAppUrl(Uri uri) {
+        String path = uri.getPath() == null ? "" : uri.getPath();
+        return "https".equals(uri.getScheme()) && siteHost.equals(uri.getHost()) && path.startsWith("/Meow-Diary");
+    }
+
+    private void openExternally(Uri uri) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, uri));
+        } catch (ActivityNotFoundException ignored) { }
+    }
+
+    private void applyThemeColor(int color) {
+        root.setBackgroundColor(color);
+        double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
+        boolean light = luminance > 0.5;
+        WindowCompat.getInsetsController(getWindow(), root).setAppearanceLightStatusBars(light);
+        WindowCompat.getInsetsController(getWindow(), root).setAppearanceLightNavigationBars(light);
+    }
+
+    private void sendSignInResult(String token, String error) {
+        String js = "window.meowNativeSignInResult&&window.meowNativeSignInResult("
+                + (token == null ? "null" : JSONObject.quote(token)) + ","
+                + (error == null ? "null" : JSONObject.quote(error)) + ")";
+        web.evaluateJavascript(js, null);
+    }
+
+    private void signInWithGoogle() {
+        GetSignInWithGoogleOption option = new GetSignInWithGoogleOption.Builder(getString(R.string.googleWebClientId)).build();
+        GetCredentialRequest request = new GetCredentialRequest.Builder().addCredentialOption(option).build();
+        credentialManager.getCredentialAsync(this, request, null, mainExecutor,
+                new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+                    @Override
+                    public void onResult(GetCredentialResponse response) {
+                        Credential credential = response.getCredential();
+                        if (credential instanceof CustomCredential
+                                && GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL.equals(credential.getType())) {
+                            try {
+                                GoogleIdTokenCredential google = GoogleIdTokenCredential.createFrom(credential.getData());
+                                sendSignInResult(google.getIdToken(), null);
+                            } catch (Exception e) {
+                                sendSignInResult(null, String.valueOf(e.getMessage()));
+                            }
+                        } else {
+                            sendSignInResult(null, "Unexpected credential type");
+                        }
+                    }
+
+                    @Override
+                    public void onError(@NonNull GetCredentialException e) {
+                        sendSignInResult(null, e instanceof GetCredentialCancellationException ? "cancelled" : String.valueOf(e.getMessage()));
+                    }
+                });
+    }
+
+    private void printHtml(String html) {
+        printView = new WebView(this);
+        printView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                PrintManager pm = (PrintManager) getSystemService(PRINT_SERVICE);
+                pm.print("Meow Diary", view.createPrintDocumentAdapter("MeowDiary"), new PrintAttributes.Builder().build());
+            }
+        });
+        printView.loadDataWithBaseURL(home, html, "text/html", "utf-8", null);
+    }
+
+    private boolean canNotify() {
+        return Build.VERSION.SDK_INT < 33
+                || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @SuppressLint("MissingPermission")
+    private void notify(String title, String body) {
+        if (!canNotify()) return;
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL_ID) == null) {
+            nm.createNotificationChannel(new NotificationChannel(CHANNEL_ID, getString(R.string.reminderChannel), NotificationManager.IMPORTANCE_DEFAULT));
+        }
+        PendingIntent open = PendingIntent.getActivity(this, 0,
+                new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+                .setContentIntent(open)
+                .setAutoCancel(true);
+        NotificationManagerCompat.from(this).notify((int) (System.currentTimeMillis() & 0x7fffffff), b.build());
+    }
+
+    /** Methods the web page can call as window.MeowAndroid.*(). Called on a background thread. */
+    private class Bridge {
+        @JavascriptInterface public boolean isApp() { return true; }
+        @JavascriptInterface public void signInWithGoogle() { runOnUiThread(MainActivity.this::signInWithGoogle); }
+        @JavascriptInterface public void signOut() {
+            runOnUiThread(() -> credentialManager.clearCredentialStateAsync(new ClearCredentialStateRequest(), null, mainExecutor,
+                    new CredentialManagerCallback<Void, ClearCredentialException>() {
+                        @Override public void onResult(Void unused) { }
+                        @Override public void onError(@NonNull ClearCredentialException e) { }
+                    }));
+        }
+        @JavascriptInterface public void printHtml(String html) { runOnUiThread(() -> MainActivity.this.printHtml(html)); }
+        @JavascriptInterface public void notify(String title, String body) { runOnUiThread(() -> MainActivity.this.notify(title, body)); }
+        @JavascriptInterface public String notificationPermission() { return canNotify() ? "granted" : "default"; }
+        @JavascriptInterface public void requestNotificationPermission() {
+            if (Build.VERSION.SDK_INT >= 33 && !canNotify())
+                runOnUiThread(() -> notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS));
+        }
+        @JavascriptInterface public void setThemeColor(String hex) {
+            try {
+                int color = Color.parseColor(hex);
+                runOnUiThread(() -> applyThemeColor(color));
+            } catch (IllegalArgumentException ignored) { }
+        }
+    }
+
+    private class ChromeClient extends WebChromeClient {
+        @Override
+        public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+            if (fileCallback != null) fileCallback.onReceiveValue(null);
+            fileCallback = callback;
+            cameraUri = null;
+            Intent intent;
+            if (params.isCaptureEnabled()) {
+                try {
+                    File dir = new File(getCacheDir(), "images");
+                    //noinspection ResultOfMethodCallIgnored
+                    dir.mkdirs();
+                    File photo = File.createTempFile("photo_", ".jpg", dir);
+                    cameraUri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".files", photo);
+                    intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                            .putExtra(MediaStore.EXTRA_OUTPUT, cameraUri)
+                            .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                } catch (Exception e) {
+                    cameraUri = null;
+                    intent = params.createIntent();
+                }
+            } else {
+                intent = params.createIntent();
+                if (params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            }
+            try {
+                fileLauncher.launch(intent);
+                return true;
+            } catch (ActivityNotFoundException e) {
+                fileCallback = null;
+                cameraUri = null;
+                return false;
+            }
+        }
+
+        @Override
+        public void onPermissionRequest(PermissionRequest request) {
+            boolean wantsMic = false;
+            for (String r : request.getResources()) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) wantsMic = true;
+            if (!wantsMic) { request.deny(); return; }
+            if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+            } else {
+                pendingWebPermission = request;
+                micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (web != null) web.destroy();
+        super.onDestroy();
+    }
+
+}
