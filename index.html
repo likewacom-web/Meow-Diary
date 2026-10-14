@@ -437,12 +437,17 @@ function initColorStudio(){
 }
 function isDarkHex(hex){const n=parseInt(hex.replace('#',''),16),r=n>>16&255,g=n>>8&255,b=n&255;return (r*299+g*587+b*114)/1000<125}
 
+
 const firebaseConfig = {
-  apiKey: "PASTE_YOUR_FIREBASE_API_KEY",
-  authDomain: "PASTE_YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "PASTE_YOUR_PROJECT_ID",
-  appId: "PASTE_YOUR_FIREBASE_APP_ID"
+  apiKey: "AIzaSyAeM-nMoOW_TUkyepwhGy3JLGzn4U3NgIQ",
+  authDomain: "meow-diary-5265d.firebaseapp.com",
+  projectId: "meow-diary-5265d",
+  storageBucket: "meow-diary-5265d.firebasestorage.app",
+  messagingSenderId: "731296956907",
+  appId: "1:731296956907:web:eefaec7b348c797f9dd9ae",
+  measurementId: "G-LNYSN55NKG"
 };
+
 const $=id=>document.getElementById(id);
 let colors=JSON.parse(safeStorage.getItem('note-custom-note-colors')||'null')||['#e9e1ff','#ddf4e7','#ffe4d6','#fff1b8','#ffe0ec'];
 let app,auth,db,storage,currentUser=null,notes=[],editingId=null,selectedColor=0,filter='all',unsubscribeNotes=null,toastTimer,checkItems=[],existingAttachments=[],selectedStickers=[],drawingData='',mediaRecorder=null,recordedChunks=[],favoriteOnly=false,calendarDate=new Date();
