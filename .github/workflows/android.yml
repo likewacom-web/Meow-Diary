@@ -35,7 +35,7 @@ jobs:
         working-directory: android
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        run: gradle --no-daemon bundleRelease assembleRelease -PversionCode=${{ github.run_number }}
+        run: gradle --no-daemon bundleRelease assembleRelease assembleDebug -PversionCode=${{ github.run_number }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -43,3 +43,9 @@ jobs:
           path: |
             android/app/build/outputs/bundle/release/*.aab
             android/app/build/outputs/apk/release/*.apk
+
+      # Debug-signed APK: installs directly on a phone for testing.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meow-diary-test-apk-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/*.apk
