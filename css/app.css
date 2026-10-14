@@ -362,4 +362,3 @@ body.dark .editorbottom{border-color:#40374a}
 .sumH{font-size:14px;margin:18px 0 8px}
 .sumBar{display:flex;align-items:center;gap:8px;margin:6px 0}.sumBar span{font-size:20px;width:28px}.sumBar i{height:12px;border-radius:8px;background:var(--purple);display:block}.sumBar b{font-size:12px;color:var(--muted)}
 .sumEmpty{color:var(--muted);font-size:13px;text-align:center;padding:12px}
-body{font-family:system-ui,sans-serif;padding:28px;color:#302b37}article{break-inside:avoid;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:24px}h2{font-size:18px}pre{white-space:pre-wrap;font:inherit}
