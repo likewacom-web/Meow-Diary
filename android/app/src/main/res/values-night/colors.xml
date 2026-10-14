@@ -1,0 +1,4 @@
+<resources>
+    <!-- Dark mode: matches the Night theme so there is no white flash on start -->
+    <color name="themeColor">#211F29</color>
+</resources>
