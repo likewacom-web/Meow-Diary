@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -78,6 +79,9 @@ import java.util.concurrent.Executor;
  * Google blocks its sign-in page inside WebViews.
  */
 public class MainActivity extends AppCompatActivity {
+    static final String ACTION_NEW_NOTE = "com.likewacom.meowdiary.NEW_NOTE";
+    static final String ACTION_NEW_CHECKLIST = "com.likewacom.meowdiary.NEW_CHECKLIST";
+    static final String ACTION_NEW_PHOTO = "com.likewacom.meowdiary.NEW_PHOTO";
     private WebView web;
     private FrameLayout root;
     private String home;
@@ -121,6 +125,22 @@ public class MainActivity extends AppCompatActivity {
                 fileCallback.onReceiveValue(uris);
                 fileCallback = null;
                 cameraUri = null;
+            });
+
+    // "Photo note" shortcut: take a picture, then hand it to the page like a share.
+    private Uri shortcutPhotoUri;
+    private final ActivityResultLauncher<Uri> photoLauncher = registerForActivityResult(
+            new ActivityResultContracts.TakePicture(), saved -> {
+                Uri uri = shortcutPhotoUri;
+                shortcutPhotoUri = null;
+                if (!Boolean.TRUE.equals(saved) || uri == null) return;
+                Executors.newSingleThreadExecutor().execute(() -> {
+                    String d = imageAsDataUrl(uri);
+                    if (d == null) return;
+                    JSONObject payload = new JSONObject();
+                    try { payload.put("images", new JSONArray().put(d)); } catch (Exception ignored) { }
+                    runOnUiThread(() -> callPage("meowSharedContent", payload.toString()));
+                });
             });
 
     private final ActivityResultLauncher<String> micPermissionLauncher = registerForActivityResult(
@@ -199,7 +219,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        pendingIntent = getIntent();
+        // After a re-create (e.g. the phone switched to dark mode) the original share /
+        // shortcut intent comes back; it was already handled.
+        pendingIntent = savedInstanceState == null ? getIntent() : null;
         if (lockEnabled()) showLock();
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl(startUrl(getIntent()));
@@ -224,6 +246,12 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         String action = intent.getAction();
+        if (ACTION_NEW_NOTE.equals(action) || ACTION_NEW_CHECKLIST.equals(action) || ACTION_NEW_PHOTO.equals(action)) {
+            intent.setAction(Intent.ACTION_MAIN); // handle once
+            if (ACTION_NEW_PHOTO.equals(action)) takeShortcutPhoto();
+            else callPage("meowQuickAction", ACTION_NEW_CHECKLIST.equals(action) ? "\"checklist\"" : "\"text\"");
+            return;
+        }
         if (!Intent.ACTION_SEND.equals(action) && !Intent.ACTION_SEND_MULTIPLE.equals(action)) return;
         intent.setAction(Intent.ACTION_MAIN); // don't import twice after rotation / restore
         String subject = intent.getStringExtra(Intent.EXTRA_SUBJECT);
@@ -251,6 +279,28 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception ignored) { }
             runOnUiThread(() -> callPage("meowSharedContent", payload.toString()));
         });
+    }
+
+    private void takeShortcutPhoto() {
+        try {
+            File dir = new File(getCacheDir(), "images");
+            //noinspection ResultOfMethodCallIgnored
+            dir.mkdirs();
+            File photo = File.createTempFile("photo_", ".jpg", dir);
+            shortcutPhotoUri = FileProvider.getUriForFile(this, getPackageName() + ".files", photo);
+            photoLauncher.launch(shortcutPhotoUri);
+        } catch (Exception e) {
+            shortcutPhotoUri = null;
+        }
+    }
+
+    private void shareText(String title, String text) {
+        Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
+        if (title != null && !title.isEmpty()) send.putExtra(Intent.EXTRA_SUBJECT, title);
+        Intent chooser = Intent.createChooser(send, title == null || title.isEmpty() ? getString(R.string.appName) : title);
+        // Don't offer Meow Diary itself as a place to share the note to.
+        chooser.putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, new ComponentName[]{new ComponentName(this, MainActivity.class)});
+        try { startActivity(chooser); } catch (ActivityNotFoundException ignored) { }
     }
 
     /** Calls window[fn](arg) once the page has defined it (retries for ~10 s). */
@@ -463,6 +513,7 @@ public class MainActivity extends AppCompatActivity {
             if (Build.VERSION.SDK_INT >= 33 && !Reminders.canNotify(MainActivity.this))
                 runOnUiThread(() -> notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS));
         }
+        @JavascriptInterface public void shareText(String title, String text) { runOnUiThread(() -> MainActivity.this.shareText(title, text)); }
         @JavascriptInterface public boolean appLockAvailable() { return lockAvailable(); }
         @JavascriptInterface public boolean getAppLock() { return lockEnabled(); }
         @JavascriptInterface public void setAppLock(boolean enabled) {

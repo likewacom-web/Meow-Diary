@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="new_note" android:enabled="true"
+        android:icon="@drawable/ic_shortcut_note"
+        android:shortcutShortLabel="@string/shortcutNote"
+        android:shortcutLongLabel="@string/shortcutNote">
+        <intent android:action="com.likewacom.meowdiary.NEW_NOTE"
+            android:targetPackage="com.likewacom.meowdiary"
+            android:targetClass="com.likewacom.meowdiary.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="new_checklist" android:enabled="true"
+        android:icon="@drawable/ic_shortcut_checklist"
+        android:shortcutShortLabel="@string/shortcutChecklist"
+        android:shortcutLongLabel="@string/shortcutChecklist">
+        <intent android:action="com.likewacom.meowdiary.NEW_CHECKLIST"
+            android:targetPackage="com.likewacom.meowdiary"
+            android:targetClass="com.likewacom.meowdiary.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="photo_note" android:enabled="true"
+        android:icon="@drawable/ic_shortcut_photo"
+        android:shortcutShortLabel="@string/shortcutPhoto"
+        android:shortcutLongLabel="@string/shortcutPhoto">
+        <intent android:action="com.likewacom.meowdiary.NEW_PHOTO"
+            android:targetPackage="com.likewacom.meowdiary"
+            android:targetClass="com.likewacom.meowdiary.MainActivity" />
+    </shortcut>
+</shortcuts>

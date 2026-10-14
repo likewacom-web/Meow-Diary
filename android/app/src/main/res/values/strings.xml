@@ -7,4 +7,7 @@
     <string name="dailyBody">น้องเหมียวรออยู่ วันนี้เป็นยังไงบ้าง? มาจดไว้กัน</string>
     <string name="unlockTitle">ปลดล็อกเหมียวไดอารี่</string>
     <string name="unlockHint">แตะเพื่อปลดล็อก</string>
+    <string name="shortcutNote">โน้ตใหม่</string>
+    <string name="shortcutChecklist">เช็กลิสต์ใหม่</string>
+    <string name="shortcutPhoto">ถ่ายรูปจด</string>
 </resources>
