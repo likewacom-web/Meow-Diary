@@ -350,6 +350,14 @@ body.dark .checkItem{border-color:#40374a}
 .privacyLink{color:var(--purple);font-weight:700}
 .dangerBtn{margin-top:10px;width:100%;border:1px solid #f0c8d4;background:#fff5f8;color:#a3405f;border-radius:14px;padding:12px;font-weight:800}
 body.dark .dangerBtn{background:#3a2530;border-color:#6b3a4c;color:#ffb3c8}
+
+/* ---- editor scrolls as one page (notes can now hold long text and pictures) ---- */
+.editor{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.editor>*{flex-shrink:0}
+.editorTools{max-height:none;overflow:visible}
+.edithead{position:sticky;top:-15px;z-index:3;background:var(--bg);margin-top:-15px;padding-top:15px}
+.editorbottom{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom));z-index:3;background:var(--bg);margin-bottom:calc(-18px - env(safe-area-inset-bottom));padding:10px 0 calc(18px + env(safe-area-inset-bottom));border-top:1px solid #ece4ee}
+body.dark .editorbottom{border-color:#40374a}
 </style>
 </head>
 <body><main class="app">
