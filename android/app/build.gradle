@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+}
+
+// The web app this Android app opens (Trusted Web Activity).
+def siteHost = 'likewacom-web.github.io'
+def launchUrl = "https://${siteHost}/Meow-Diary/"
+
+android {
+    namespace 'com.likewacom.meowdiary'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.likewacom.meowdiary'
+        minSdk 21
+        targetSdk 36
+        // CI passes -PversionCode=<run number> so every upload gets a higher code.
+        versionCode((project.findProperty('versionCode') ?: '1') as int)
+        versionName '1.0.' + versionCode
+
+        resValue 'string', 'hostName', siteHost
+        resValue 'string', 'launchUrl', launchUrl
+        resValue 'string', 'assetStatements',
+            "[{ \\\"relation\\\": [\\\"delegate_permission/common.handle_all_urls\\\"], \\\"target\\\": {\\\"namespace\\\": \\\"web\\\", \\\"site\\\": \\\"https://${siteHost}\\\"}}]"
+    }
+
+    signingConfigs {
+        release {
+            def ks = System.getenv('KEYSTORE_FILE')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias 'upload'
+                keyPassword System.getenv('KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (System.getenv('KEYSTORE_FILE')) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+}
