@@ -319,6 +319,12 @@ body.dark .imageActions button{background:#2c2837;border-color:#40374a}
 .imgTools{position:absolute;top:6px;right:6px;display:flex;gap:6px}
 .imgTools button{width:34px;height:34px;border:0;border-radius:50%;background:#000000a0;color:#fff;font-size:17px;line-height:1;font-weight:800}
 body.dark .richBody{background:#2c2837;border-color:#40374a;color:var(--ink)}
+
+.inlineImg img{-webkit-touch-callout:none;-webkit-user-drag:none}
+.inlineImg.dragging{opacity:.45;transform:scale(.97);outline:3px dashed var(--purple);transition:transform .15s}
+body.imgDragging,body.imgDragging *{user-select:none!important;-webkit-user-select:none!important}
+body.imgDragging .editor{touch-action:none}
+.imgDropLine{position:fixed;display:none;height:4px;border-radius:4px;background:var(--purple);box-shadow:0 0 0 3px #7663aa33;z-index:50;pointer-events:none}
 </style>
 </head>
 <body><main class="app">
@@ -492,6 +498,7 @@ body.dark .richBody{background:#2c2837;border-color:#40374a;color:var(--ink)}
 <div class="featureModal" id="statsModal" role="dialog" aria-modal="true"><section class="featureCard"><div class="settingsHead"><button class="close" id="statsClose">×</button><h2 id="statsTitle">สถิติอารมณ์</h2></div><p id="statsHint">สรุปจากอารมณ์ที่บันทึกไว้ในอุปกรณ์นี้</p><div class="statTiles" id="statsTiles"></div><div class="moodBars" id="moodBars"></div></section></div>
 <div class="featureModal" id="backupModal" role="dialog" aria-modal="true"><section class="featureCard"><div class="settingsHead"><button class="close" id="backupClose">×</button><h2 id="backupTitle">สำรองและกู้คืน</h2></div><p id="backupHint">ส่งออกข้อมูลเป็นไฟล์ JSON เพื่อเก็บไว้หรือย้ายเครื่อง</p><div class="backupActions"><button id="exportBackup">⬇️ ส่งออกข้อมูล</button><button id="importBackupBtn">⬆️ กู้คืนจากไฟล์</button></div><input class="restoreFile" id="backupFile" type="file" accept="application/json,.json" hidden><p id="backupStatus" aria-live="polite"></p><p id="backupCaution">การนำเข้าโน้ตจากไฟล์ต้องเข้าสู่ระบบ Google; ข้อมูลอารมณ์และน้องแมวจะกู้คืนในอุปกรณ์นี้</p></section></div>
 <div class="featureModal" id="widgetModal" role="dialog" aria-modal="true" hidden><section class="featureCard"><div class="settingsHead"><button class="close" id="widgetClose">×</button><h2 id="widgetTitle">วิดเจ็ตเหมียวไดอารี่</h2></div><div class="widgetPreview"><div style="display:flex;gap:12px;align-items:center"><span class="widgetCat" id="widgetCat">🐱</span><div><h3 id="widgetPetName">น้องเหมียว</h3><p id="widgetWidgetStats">เหรียญ 0 · เลเวล 1</p><p id="widgetDiaryCount">บันทึกวันนี้ 0 รายการ</p></div></div><button id="widgetWrite">＋ เขียนบันทึก</button></div><p id="widgetHint">นี่เป็นการ์ดทางลัดในแอป HTML หากต้องการวิดเจ็ตจริงบนหน้าจอหลัก Android ต้องทำส่วน Android native เพิ่ม</p></section></div>
+<div class="imgDropLine" id="imgDropLine" aria-hidden="true"></div>
 <div class="imgViewer" id="imgViewer" role="dialog" aria-modal="true" aria-label="Image"><img id="imgViewerImg" alt=""><button type="button" id="imgViewerClose" aria-label="Close">×</button></div>
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="แก้ไขบันทึก"><section class="editor">
 <div class="edithead"><button class="close" id="close" aria-label="ปิด">‹</button><h2 id="editorHeading">โน้ตใหม่</h2><button class="textbtn" id="save" data-i18n="save">บันทึก</button></div>
@@ -1031,7 +1038,7 @@ rich.addEventListener('click',e=>{
  if(e.target.closest('[data-imgremove]')){const next=fig.nextSibling;fig.remove();if(next&&next.nodeName==='DIV'&&!next.textContent&&next.previousSibling?.nodeName==='DIV'&&!next.previousSibling.textContent)next.remove();syncBodyFromRich();return}
  if(e.target.closest('[data-imgup]')){const prev=sib(fig,'previousSibling');if(prev){prev.before(fig);syncBodyFromRich()}return}
  if(e.target.closest('[data-imgdown]')){const next=sib(fig,'nextSibling');if(next){next.after(fig);syncBodyFromRich()}return}
- if(e.target.nodeName==='IMG')openImageViewer(e.target.src);
+ if(e.target.nodeName==='IMG'&&!imgDrag.justDropped)openImageViewer(e.target.src);
 });
 // Paste images as pictures and everything else as plain text.
 rich.addEventListener('paste',e=>{
@@ -1044,6 +1051,57 @@ $('addImage').addEventListener('click',()=>$('imagePick').click());
 $('takePhoto').addEventListener('click',()=>$('cameraPick').click());
 for(const id of ['imagePick','cameraPick'])$(id).addEventListener('change',async e=>{await addImageFiles(e.target.files||[]);e.target.value=''});
 $('imgViewer').addEventListener('click',()=>$('imgViewer').classList.remove('show'));
+
+// Long-press an image, then drag it to a new place in the text.
+const imgDrag={timer:null,fig:null,active:false,startX:0,startY:0,y:0,target:null,after:false,scroller:null,raf:0,justDropped:false};
+function scrollParent(el){for(let n=el.parentElement;n;n=n.parentElement){const o=getComputedStyle(n).overflowY;if((o==='auto'||o==='scroll')&&n.scrollHeight>n.clientHeight)return n}return document.scrollingElement}
+function dropSpot(y){
+ const blocks=[...rich.childNodes].filter(n=>n!==imgDrag.fig&&(n.nodeType===1||n.data?.trim()));
+ for(const b of blocks){const r=(b.nodeType===1?b:(()=>{const rg=document.createRange();rg.selectNode(b);return rg})()).getBoundingClientRect();if(y<r.top+r.height/2)return {target:b,after:false}}
+ return blocks.length?{target:blocks[blocks.length-1],after:true}:{target:null,after:true};
+}
+function showDropLine(){
+ const line=$('imgDropLine'),spot=dropSpot(imgDrag.y);imgDrag.target=spot.target;imgDrag.after=spot.after;
+ const box=rich.getBoundingClientRect();let top;
+ if(!spot.target)top=box.top+8;else{const r=(spot.target.nodeType===1?spot.target:(()=>{const rg=document.createRange();rg.selectNode(spot.target);return rg})()).getBoundingClientRect();top=spot.after?r.bottom:r.top}
+ line.style.cssText=`display:block;top:${top-2}px;left:${box.left+10}px;width:${box.width-20}px`;
+}
+function dragLoop(){
+ if(!imgDrag.active)return;
+ // Auto-scroll when the finger is near the top or bottom edge.
+ const sc=imgDrag.scroller,edge=70,vh=innerHeight;
+ if(sc){if(imgDrag.y<edge)sc.scrollTop-=12;else if(imgDrag.y>vh-edge)sc.scrollTop+=12}
+ showDropLine();imgDrag.raf=requestAnimationFrame(dragLoop);
+}
+function cancelPress(){clearTimeout(imgDrag.timer);imgDrag.timer=null;if(!imgDrag.active)imgDrag.fig=null}
+function startImgDrag(){
+ imgDrag.active=true;imgDrag.scroller=scrollParent(rich);imgDrag.fig.classList.add('dragging');document.body.classList.add('imgDragging');
+ try{navigator.vibrate?.(30)}catch{}
+ dragLoop();
+}
+function endImgDrag(drop){
+ cancelAnimationFrame(imgDrag.raf);$('imgDropLine').style.display='none';document.body.classList.remove('imgDragging');
+ const fig=imgDrag.fig;if(fig){fig.classList.remove('dragging');
+  if(drop){const t=imgDrag.target;if(t){imgDrag.after?t.after(fig):t.before(fig)}else rich.append(fig);
+   if(!fig.nextSibling||fig.nextSibling.nodeName==='FIGURE'){const d=document.createElement('div');d.innerHTML='<br>';fig.after(d)}
+   syncBodyFromRich();imgDrag.justDropped=true;setTimeout(()=>imgDrag.justDropped=false,350)}}
+ imgDrag.active=false;imgDrag.fig=null;
+}
+rich.addEventListener('pointerdown',e=>{
+ const fig=e.target.closest('figure.inlineImg');if(!fig||e.target.closest('.imgTools')||(e.pointerType==='mouse'&&e.button!==0))return;
+ imgDrag.fig=fig;imgDrag.startX=e.clientX;imgDrag.startY=imgDrag.y=e.clientY;
+ imgDrag.timer=setTimeout(startImgDrag,420);
+});
+addEventListener('pointermove',e=>{
+ if(imgDrag.active){imgDrag.y=e.clientY;e.preventDefault();return}
+ if(imgDrag.timer&&Math.hypot(e.clientX-imgDrag.startX,e.clientY-imgDrag.startY)>10)cancelPress();
+},{passive:false});
+// While dragging, stop the page from scrolling under the finger.
+addEventListener('touchmove',e=>{if(imgDrag.active)e.preventDefault()},{passive:false});
+addEventListener('pointerup',()=>{if(imgDrag.active)endImgDrag(true);else cancelPress()});
+addEventListener('pointercancel',()=>{if(imgDrag.active)endImgDrag(false);else cancelPress()});
+rich.addEventListener('contextmenu',e=>{if(e.target.closest('figure.inlineImg'))e.preventDefault()});
+rich.addEventListener('dragstart',e=>{if(e.target.closest('figure.inlineImg'))e.preventDefault()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('imgViewer').classList.remove('show')});
 $('close').addEventListener('click',closeEditor);$('save').addEventListener('click',saveNote);$('saveBottom').addEventListener('click',saveNote);$('search').addEventListener('input',render);
 $('delete').addEventListener('click',async()=>{if(!editingId)return;if(!currentUser){notes=notes.map(n=>n.id===editingId?{...n,deletedAt:new Date().toISOString(),updatedAt:Date.now()}:n);safeStorage.setItem('meow-local-notes',JSON.stringify(notes));render();closeEditor();toast('ย้ายโน้ตไปถังขยะแล้ว');return}queueWrite(setDoc(doc(noteCollection(),editingId),{deletedAt:new Date().toISOString(),updatedAt:serverTimestamp()}, {merge:true}),e=>'ลบไม่สำเร็จ: '+e.message);closeEditor();toast('ย้ายโน้ตไปถังขยะแล้ว')});
