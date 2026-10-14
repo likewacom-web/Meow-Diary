@@ -103,6 +103,123 @@ body.dark .aiPanel{border-color:#494252}body.dark .aiPrompt,body.dark .aiOutput,
   button { max-width:100%; }
 }
 button, [role="button"], a { pointer-events:auto; }
+
+/* Mobile-app visual refresh — CSS-only, preserves existing features and localization */
+:root{
+  --bg:#fbf8ff; --ink:#332d40; --muted:#8b8299; --purple:#8066c7;
+  --lav:#eee7ff; --mint:#e3f7ec; --peach:#fff0e7; --yellow:#fff4c9; --pink:#ffe8f1;
+  --line:#eee7f4; --card:#ffffff; --soft:#f4efff;
+}
+html{background:var(--bg);-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  min-height:100dvh;
+  background:radial-gradient(ellipse at 10% 0%,#f4eaff 0,transparent 36%),var(--bg);
+  color:var(--ink);
+  -webkit-tap-highlight-color:transparent;
+}
+button,select,input,textarea{touch-action:manipulation}
+button{transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease}
+button:active{transform:scale(.97)}
+.app{
+  width:100%;max-width:680px;min-height:100dvh;margin:0 auto;
+  padding:calc(17px + env(safe-area-inset-top)) 16px calc(104px + env(safe-area-inset-bottom));
+}
+header{gap:11px;margin-bottom:16px;align-items:center}
+.eyebrow{font-size:11px;letter-spacing:.01em}
+.title{font-size:27px;line-height:1.2;letter-spacing:-.035em}
+.logo{padding:9px 11px;border-radius:15px;font-size:11px;letter-spacing:1.4px;box-shadow:0 5px 16px #9a83c51a}
+.settingsBtn{width:42px;height:42px;flex:0 0 42px;border:1px solid var(--line);background:#ffffffd9;border-radius:15px;box-shadow:0 5px 18px #47345c0b}
+.languageShortcutRow{margin:-3px 0 13px}
+.languageShortcut{border-color:#e9e0f4;background:#fff;border-radius:14px;padding:8px 12px;box-shadow:none}
+.searchwrap{margin-bottom:11px}
+#search{height:48px;border:1px solid #eee6f5;background:#fff;border-radius:17px;padding-top:12px;padding-bottom:12px;box-shadow:0 5px 20px #4d37660a}
+#search:focus{border-color:#b7a4e9;box-shadow:0 0 0 3px #e9e1ff}
+.subrow{margin:12px 3px 13px;font-size:11px}
+.account{gap:10px;padding:12px;border:1px solid #eee7f4;border-radius:19px;margin-bottom:10px;box-shadow:0 7px 22px #4d376608}
+.avatar{width:42px;height:42px;flex:0 0 42px}
+.accountcopy strong{font-size:12px}
+.gbtn,.outbtn{border-radius:13px;padding:10px 11px}
+.notice{padding:0 3px;font-size:11px;margin:7px 3px 15px}
+.filters{gap:7px;overflow-x:auto;scrollbar-width:none;padding:2px 1px 5px;margin:0 -1px 13px}
+.filters::-webkit-scrollbar,.toolbar::-webkit-scrollbar,.extrasBar::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:9px 14px;border-color:#ebe4f2;border-radius:13px;font-size:12px}
+.chip.active{background:#eae2ff;color:#5d4898;border-color:#eae2ff;box-shadow:0 4px 12px #9b83d41c}
+.toolbar{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:7px;margin:0 -16px 11px;padding:1px 16px 5px}
+.toolbar select,.toolbar button{flex:0 0 auto;min-height:39px;border:1px solid #ece5f2;border-radius:13px;padding:9px 12px;background:#fff;font-size:11px;box-shadow:0 3px 10px #49355c08}
+.toolbar select{max-width:155px;min-width:130px}
+.extrasBar{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:7px;margin:0 -16px 16px;padding:0 16px 5px}
+.extrasBar button{flex:0 0 auto;min-height:39px;border:1px solid #eee5f2;background:#fff;border-radius:13px;padding:9px 12px;font-size:11px;box-shadow:0 3px 10px #49355c07}
+.petPanel{grid-template-columns:94px minmax(0,1fr);gap:12px;padding:13px;margin-bottom:12px;border:1px solid #f0e2f2;border-radius:23px;background:linear-gradient(145deg,#fff7fb 0%,#f4efff 100%);box-shadow:0 8px 24px #573a6810}
+.petAvatar{height:112px;border-radius:19px}
+.petInfo h3{font-size:17px;margin:0 0 4px}
+.petInfo p{font-size:11px;line-height:1.45;margin:0 0 9px}
+.petMeter b{font-size:10px}
+.meterTrack{height:6px}
+.petStats{gap:7px}
+.petActions{gap:6px}
+.petActions button,.missionList button,.backupActions button,.widgetPreview button{border-radius:12px;padding:9px 10px;font-size:11px;min-height:36px}
+.missionPanel{padding:14px;border:1px solid #eee7f4;border-radius:20px;margin-bottom:14px;box-shadow:0 6px 20px #49355c07}
+.missionPanel h3{font-size:14px}
+.missionItem{padding:10px 0;font-size:12px}
+.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.note{min-width:0;min-height:158px;padding:13px;border:1px solid #ffffffa6;border-radius:20px;box-shadow:0 6px 20px #4d37660b}
+.notetitle{font-size:14px;line-height:1.4}
+.preview{font-size:12px;line-height:1.5;margin-top:7px}
+.notefoot{font-size:10px;gap:5px;margin-top:10px}
+.iconbtn{min-width:28px;min-height:28px;border-radius:9px}
+.fab{
+  right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:58px;height:58px;
+  border-radius:20px;background:linear-gradient(145deg,#9078d7,#765bc0);
+  box-shadow:0 9px 26px #8066c755,0 2px 5px #45316b1a;
+}
+.overlay{padding-bottom:env(safe-area-inset-bottom)}
+.editor{max-width:680px;height:min(92dvh,900px);padding:15px 16px calc(18px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;box-shadow:0 -12px 36px #2a18351c}
+.edithead{padding-bottom:8px;border-bottom:1px solid #eee7f2}
+.fieldtitle{font-size:23px}
+.fieldbody{border-color:#eee6f3;border-radius:17px}
+.savebtn,.deletebtn{min-height:42px;border-radius:14px}
+.settingsOverlay{padding-bottom:env(safe-area-inset-bottom)}
+.settingsPanel{max-height:88dvh;overflow:auto;padding:20px 18px calc(16px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0}
+.settingsSection{padding:16px 0}
+.settingsSection select,.languagePanel select{min-height:45px;border-radius:14px}
+.languagePanel,.featureCard,.calendarCard{border-radius:25px;box-shadow:0 18px 55px #28183a30}
+input,textarea,select{font-size:16px}
+body.dark{
+  --bg:#211e2b;--ink:#f5effb;--muted:#b8adc6;--purple:#b6a1f0;
+  --lav:#3d3451;--mint:#293f36;--peach:#49352f;--yellow:#49412a;--pink:#49313f;
+  --line:#40374a;--card:#2c2837;--soft:#393148;
+  background:radial-gradient(ellipse at 10% 0%,#302741 0,transparent 38%),var(--bg)
+}
+body.dark .settingsBtn,body.dark .languageShortcut,body.dark #search,
+body.dark .toolbar select,body.dark .toolbar button,body.dark .extrasBar button,
+body.dark .languagePanel,body.dark .account{background:#2c2837;border-color:#40374a;color:var(--ink)}
+body.dark .petPanel{background:linear-gradient(145deg,#352a3b,#2b293d);border-color:#44364b}
+body.dark .missionPanel{background:#2c2837;border-color:#40374a}
+body.dark .chip{background:#2c2837;border-color:#40374a;color:var(--ink)}
+body.dark .chip.active{background:#45385e;border-color:#45385e;color:#eee7ff}
+body.dark .note{border-color:#40374a}
+@media(min-width:600px){
+  body{padding:20px 0}
+  .app{min-height:calc(100dvh - 40px);padding:25px 22px 110px;border:1px solid #eee6f4;border-radius:32px;background:#ffffff85;box-shadow:0 18px 70px #49355c0c}
+  body.dark .app{background:#262230;border-color:#40374a}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+  .toolbar,.extrasBar{margin-left:0;margin-right:0;padding-left:0;padding-right:0;flex-wrap:wrap;overflow:visible}
+}
+@media(max-width:370px){
+  .app{padding-left:12px;padding-right:12px}
+  .title{font-size:24px}
+  .logo{padding:8px 9px;font-size:10px}
+  .account{flex-wrap:wrap}
+  .accountcopy{min-width:calc(100% - 58px)}
+  .gbtn,.outbtn{margin-left:auto}
+  .petPanel{grid-template-columns:78px minmax(0,1fr);gap:9px;padding:10px}
+  .petAvatar{height:98px}
+  .petActions button{padding:8px}
+  .grid{gap:8px}
+  .note{padding:11px;border-radius:17px}
+  .notetitle{font-size:13px}
+}
+
 </style>
 </head>
 <body><main class="app">
