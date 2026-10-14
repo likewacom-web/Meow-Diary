@@ -5,4 +5,6 @@
     <string name="noteReminderBody">ถึงเวลาเปิดดูโน้ตของคุณแล้ว 🐾</string>
     <string name="dailyTitle">เขียนไดอารี่กันเถอะ 🐱</string>
     <string name="dailyBody">น้องเหมียวรออยู่ วันนี้เป็นยังไงบ้าง? มาจดไว้กัน</string>
+    <string name="unlockTitle">ปลดล็อกเหมียวไดอารี่</string>
+    <string name="unlockHint">แตะเพื่อปลดล็อก</string>
 </resources>
