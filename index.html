@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#fdf9f4"><title>เหมียวไดอารี่</title>
-<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/favicon-64.png" sizes="64x64" type="image/png"><link rel="icon" href="icons/icon-192.png" sizes="192x192">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="เหมียวไดอารี่"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{--bg:#fdf9f4;--ink:#35313d;--muted:#8b8290;--purple:#7663aa;--lav:#e9e1ff;--mint:#ddf4e7;--peach:#ffe4d6;--yellow:#fff1b8;--pink:#ffe0ec}
@@ -227,7 +227,7 @@ body.dark .note{border-color:#40374a}
 .app{padding-bottom:150px}
 .topbar{position:sticky;top:0;z-index:5;margin:-25px -18px 0;padding:14px 18px 10px;background:var(--bg);display:flex;align-items:center;gap:6px;border-bottom:1px solid #ece4ee}
 .brand{flex:1;display:flex;align-items:center;gap:10px;min-width:0}
-.brandCat{width:40px;height:40px;border-radius:14px;background:var(--lav);display:grid;place-items:center;font-size:22px;flex:none}
+.brandCat{width:40px;height:40px;border-radius:12px;flex:none;display:block;object-fit:cover;box-shadow:0 2px 8px #7663aa33}
 .brandText{min-width:0}.brandText .title{font-size:22px;margin:0;line-height:1.2}
 .brandText .status{display:block;font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topIcon{width:42px;height:42px;border:0;border-radius:14px;background:transparent;color:var(--ink);font-size:22px;display:grid;place-items:center}
@@ -329,7 +329,7 @@ body.imgDragging .editor{touch-action:none}
 </style>
 </head>
 <body><main class="app">
-<header class="topbar"><div class="brand"><span class="brandCat" aria-hidden="true">🐱</span><div class="brandText"><div class="title" data-i18n="homeTitle">บันทึกของฉัน</div><span class="status" id="syncStatus">○ ยังไม่ได้เชื่อมต่อ</span></div></div><button type="button" class="topIcon" id="viewToggle" aria-label="List / Grid">▦</button><button class="topIcon" id="settingsOpen" aria-label="Settings">⋮</button></header>
+<header class="topbar"><div class="brand"><img class="brandCat" src="icons/icon-192.png" alt="" aria-hidden="true"><div class="brandText"><div class="title" data-i18n="homeTitle">บันทึกของฉัน</div><span class="status" id="syncStatus">○ ยังไม่ได้เชื่อมต่อ</span></div></div><button type="button" class="topIcon" id="viewToggle" aria-label="List / Grid">▦</button><button class="topIcon" id="settingsOpen" aria-label="Settings">⋮</button></header>
  <div class="searchwrap" id="searchWrap" hidden><span>⌕</span><input id="search" type="search" placeholder="ค้นหาบันทึก..." aria-label="ค้นหาบันทึก" data-i18n-placeholder="searchPlaceholder"><button type="button" class="searchClose" id="searchClose" aria-label="Close">×</button></div>
 <div class="sortbar" id="sortBar"><span id="count">0 บันทึก</span><button type="button" class="filterTag" id="filterTag" hidden></button><label class="sortSelect"><span aria-hidden="true">⇅</span><select id="sortBy" aria-label="Sort"><option value="updated">แก้ไขล่าสุด</option><option value="created">สร้างล่าสุด</option><option value="title">ชื่อ ก-ฮ / A-Z</option><option value="color">สี</option></select></label></div>
 <section class="petView" id="petView" hidden>
