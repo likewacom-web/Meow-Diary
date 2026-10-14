@@ -3,13 +3,13 @@ package com.likewacom.meowdiary;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.ImageDecoder;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.print.PrintAttributes;
 import android.print.PrintManager;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
@@ -32,8 +33,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
@@ -54,7 +53,13 @@ import androidx.credentials.exceptions.GetCredentialException;
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executors;
 
 import java.io.File;
 import java.util.concurrent.Executor;
@@ -65,8 +70,6 @@ import java.util.concurrent.Executor;
  * Google blocks its sign-in page inside WebViews.
  */
 public class MainActivity extends AppCompatActivity {
-    private static final String CHANNEL_ID = "reminders";
-
     private WebView web;
     private FrameLayout root;
     private String home;
@@ -78,6 +81,8 @@ public class MainActivity extends AppCompatActivity {
     private Uri cameraUri;
     private PermissionRequest pendingWebPermission;
     private WebView printView; // kept alive until printing has started
+    private boolean pageReady;
+    private Intent pendingIntent; // share / notification intent waiting for the page
 
     private final ActivityResultLauncher<Intent> fileLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -153,6 +158,16 @@ public class MainActivity extends AppCompatActivity {
                 openExternally(uri);
                 return true;
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                pageReady = true;
+                if (pendingIntent != null) {
+                    Intent i = pendingIntent;
+                    pendingIntent = null;
+                    deliverIntent(i);
+                }
+            }
         });
         web.setWebChromeClient(new ChromeClient());
 
@@ -168,6 +183,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        pendingIntent = getIntent();
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl(startUrl(getIntent()));
     }
@@ -176,7 +192,83 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         Uri data = intent.getData();
-        if (data != null && isAppUrl(data)) web.loadUrl(data.toString());
+        if (data != null && isAppUrl(data)) { web.loadUrl(data.toString()); return; }
+        if (pageReady) deliverIntent(intent);
+        else pendingIntent = intent;
+    }
+
+    /** Hand a shared item or a tapped reminder to the page (it waits until the app script is ready). */
+    private void deliverIntent(Intent intent) {
+        if (intent == null) return;
+        String noteId = intent.getStringExtra(Reminders.EXTRA_NOTE_ID);
+        if (noteId != null) {
+            callPage("meowOpenNote", JSONObject.quote(noteId));
+            intent.removeExtra(Reminders.EXTRA_NOTE_ID);
+            return;
+        }
+        String action = intent.getAction();
+        if (!Intent.ACTION_SEND.equals(action) && !Intent.ACTION_SEND_MULTIPLE.equals(action)) return;
+        intent.setAction(Intent.ACTION_MAIN); // don't import twice after rotation / restore
+        String subject = intent.getStringExtra(Intent.EXTRA_SUBJECT);
+        CharSequence text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT);
+        List<Uri> images = new ArrayList<>();
+        if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+            ArrayList<Uri> list = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+            if (list != null) images.addAll(list);
+        } else {
+            Uri one = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (one != null) images.add(one);
+        }
+        // Decoding images can be slow: do it off the UI thread.
+        Executors.newSingleThreadExecutor().execute(() -> {
+            JSONObject payload = new JSONObject();
+            JSONArray dataUrls = new JSONArray();
+            for (Uri u : images.subList(0, Math.min(images.size(), 10))) {
+                String d = imageAsDataUrl(u);
+                if (d != null) dataUrls.put(d);
+            }
+            try {
+                payload.put("title", subject == null ? "" : subject);
+                payload.put("text", text == null ? "" : text.toString());
+                payload.put("images", dataUrls);
+            } catch (Exception ignored) { }
+            runOnUiThread(() -> callPage("meowSharedContent", payload.toString()));
+        });
+    }
+
+    /** Calls window[fn](arg) once the page has defined it (retries for ~10 s). */
+    private void callPage(String fn, String argJson) {
+        String js = "(function t(n){if(window." + fn + "){window." + fn + "(" + argJson + ")}else if(n<50){setTimeout(function(){t(n+1)},200)}})(0)";
+        web.evaluateJavascript(js, null);
+    }
+
+    /** Downscale a shared image to at most 1600 px and return it as a JPEG data URL. */
+    private String imageAsDataUrl(Uri uri) {
+        try {
+            Bitmap bmp;
+            if (Build.VERSION.SDK_INT >= 28) {
+                bmp = ImageDecoder.decodeBitmap(ImageDecoder.createSource(getContentResolver(), uri), (decoder, info, src) -> {
+                    int w = info.getSize().getWidth(), h = info.getSize().getHeight();
+                    double scale = Math.min(1.0, 1600.0 / Math.max(w, h));
+                    decoder.setTargetSize(Math.max(1, (int) (w * scale)), Math.max(1, (int) (h * scale)));
+                    decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
+                });
+            } else {
+                BitmapFactory.Options bounds = new BitmapFactory.Options();
+                bounds.inJustDecodeBounds = true;
+                try (java.io.InputStream in = getContentResolver().openInputStream(uri)) { BitmapFactory.decodeStream(in, null, bounds); }
+                BitmapFactory.Options opts = new BitmapFactory.Options();
+                opts.inSampleSize = 1;
+                while (Math.max(bounds.outWidth, bounds.outHeight) / opts.inSampleSize > 3200) opts.inSampleSize *= 2;
+                try (java.io.InputStream in = getContentResolver().openInputStream(uri)) { bmp = BitmapFactory.decodeStream(in, null, opts); }
+            }
+            if (bmp == null) return null;
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            bmp.compress(Bitmap.CompressFormat.JPEG, 85, out);
+            return "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP);
+        } catch (Exception | OutOfMemoryError e) {
+            return null;
+        }
     }
 
     @Override
@@ -256,31 +348,6 @@ public class MainActivity extends AppCompatActivity {
         printView.loadDataWithBaseURL(home, html, "text/html", "utf-8", null);
     }
 
-    private boolean canNotify() {
-        return Build.VERSION.SDK_INT < 33
-                || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    @SuppressLint("MissingPermission")
-    private void notify(String title, String body) {
-        if (!canNotify()) return;
-        NotificationManager nm = getSystemService(NotificationManager.class);
-        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL_ID) == null) {
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL_ID, getString(R.string.reminderChannel), NotificationManager.IMPORTANCE_DEFAULT));
-        }
-        PendingIntent open = PendingIntent.getActivity(this, 0,
-                new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(title)
-                .setContentText(body)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
-                .setContentIntent(open)
-                .setAutoCancel(true);
-        NotificationManagerCompat.from(this).notify((int) (System.currentTimeMillis() & 0x7fffffff), b.build());
-    }
-
     /** Methods the web page can call as window.MeowAndroid.*(). Called on a background thread. */
     private class Bridge {
         @JavascriptInterface public boolean isApp() { return true; }
@@ -293,10 +360,17 @@ public class MainActivity extends AppCompatActivity {
                     }));
         }
         @JavascriptInterface public void printHtml(String html) { runOnUiThread(() -> MainActivity.this.printHtml(html)); }
-        @JavascriptInterface public void notify(String title, String body) { runOnUiThread(() -> MainActivity.this.notify(title, body)); }
-        @JavascriptInterface public String notificationPermission() { return canNotify() ? "granted" : "default"; }
+        @JavascriptInterface public void notify(String title, String body) {
+            Reminders.show(MainActivity.this, (int) (System.currentTimeMillis() & 0x7fffffff), title, body, null);
+        }
+        @JavascriptInterface public String notificationPermission() { return Reminders.canNotify(MainActivity.this) ? "granted" : "default"; }
+        /** [{id,title,body,at}] for every upcoming note reminder; replaces the previous schedule. */
+        @JavascriptInterface public void scheduleReminders(String json) { Reminders.setNoteReminders(MainActivity.this, json); }
+        @JavascriptInterface public void setDailyReminder(boolean enabled, int hour, int minute) {
+            Reminders.setDaily(MainActivity.this, enabled, hour, minute);
+        }
         @JavascriptInterface public void requestNotificationPermission() {
-            if (Build.VERSION.SDK_INT >= 33 && !canNotify())
+            if (Build.VERSION.SDK_INT >= 33 && !Reminders.canNotify(MainActivity.this))
                 runOnUiThread(() -> notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS));
         }
         @JavascriptInterface public void setThemeColor(String hex) {

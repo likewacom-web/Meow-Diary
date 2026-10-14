@@ -1,4 +1,8 @@
 <resources>
     <string name="appName">เหมียวไดอารี่</string>
     <string name="reminderChannel">แจ้งเตือนโน้ต</string>
+    <string name="noteReminderTitle">เตือนความจำ</string>
+    <string name="noteReminderBody">ถึงเวลาเปิดดูโน้ตของคุณแล้ว 🐾</string>
+    <string name="dailyTitle">เขียนไดอารี่กันเถอะ 🐱</string>
+    <string name="dailyBody">น้องเหมียวรออยู่ วันนี้เป็นยังไงบ้าง? มาจดไว้กัน</string>
 </resources>
