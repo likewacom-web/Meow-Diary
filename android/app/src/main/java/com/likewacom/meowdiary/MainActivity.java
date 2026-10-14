@@ -14,6 +14,12 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.print.PrintAttributes;
 import android.print.PrintManager;
 import android.provider.MediaStore;
@@ -33,6 +39,8 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
@@ -83,6 +91,14 @@ public class MainActivity extends AppCompatActivity {
     private WebView printView; // kept alive until printing has started
     private boolean pageReady;
     private Intent pendingIntent; // share / notification intent waiting for the page
+
+    // App lock: fingerprint / face / screen lock, asked on open and after 60 s in the background.
+    private static final int LOCK_AUTHENTICATORS =
+            BiometricManager.Authenticators.BIOMETRIC_WEAK | BiometricManager.Authenticators.DEVICE_CREDENTIAL;
+    private static final long RELOCK_AFTER_MS = 60_000;
+    private View lockView;
+    private long backgroundedAt;
+    private boolean authenticating;
 
     private final ActivityResultLauncher<Intent> fileLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -184,6 +200,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         pendingIntent = getIntent();
+        if (lockEnabled()) showLock();
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl(startUrl(getIntent()));
     }
@@ -269,6 +286,79 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception | OutOfMemoryError e) {
             return null;
         }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (backgroundedAt > 0 && lockEnabled() && SystemClock.elapsedRealtime() - backgroundedAt > RELOCK_AFTER_MS) showLock();
+        backgroundedAt = 0;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (!authenticating) backgroundedAt = SystemClock.elapsedRealtime();
+    }
+
+    private boolean lockEnabled() {
+        return getSharedPreferences("lock", MODE_PRIVATE).getBoolean("enabled", false) && lockAvailable();
+    }
+
+    private boolean lockAvailable() {
+        return BiometricManager.from(this).canAuthenticate(LOCK_AUTHENTICATORS) == BiometricManager.BIOMETRIC_SUCCESS;
+    }
+
+    /** Covers the notes until the phone's biometric / screen lock is passed. */
+    private void showLock() {
+        if (lockView == null) {
+            LinearLayout box = new LinearLayout(this);
+            box.setOrientation(LinearLayout.VERTICAL);
+            box.setGravity(Gravity.CENTER);
+            box.setBackgroundColor(ContextCompat.getColor(this, R.color.themeColor));
+            box.setClickable(true);
+            ImageView icon = new ImageView(this);
+            icon.setImageResource(R.mipmap.ic_launcher);
+            int size = (int) (96 * getResources().getDisplayMetrics().density);
+            box.addView(icon, new LinearLayout.LayoutParams(size, size));
+            TextView label = new TextView(this);
+            label.setText(R.string.unlockHint);
+            label.setTextSize(16);
+            label.setTextColor(0xFF6B5A8E);
+            label.setPadding(0, size / 4, 0, 0);
+            box.addView(label);
+            box.setOnClickListener(v -> authenticate());
+            lockView = box;
+        }
+        if (lockView.getParent() == null) root.addView(lockView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        root.post(this::authenticate);
+    }
+
+    private void hideLock() {
+        if (lockView != null && lockView.getParent() != null) root.removeView(lockView);
+    }
+
+    private void authenticate() {
+        if (authenticating || lockView == null || lockView.getParent() == null) return;
+        if (!lockAvailable()) { hideLock(); return; } // phone lock was removed: don't lock people out
+        authenticating = true;
+        BiometricPrompt prompt = new BiometricPrompt(this, mainExecutor, new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                authenticating = false;
+                hideLock();
+            }
+
+            @Override
+            public void onAuthenticationError(int code, @NonNull CharSequence message) {
+                authenticating = false; // stays locked; tap the lock screen to try again
+            }
+        });
+        prompt.authenticate(new BiometricPrompt.PromptInfo.Builder()
+                .setTitle(getString(R.string.unlockTitle))
+                .setSubtitle(getString(R.string.unlockHint))
+                .setAllowedAuthenticators(LOCK_AUTHENTICATORS)
+                .build());
     }
 
     @Override
@@ -372,6 +462,11 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface public void requestNotificationPermission() {
             if (Build.VERSION.SDK_INT >= 33 && !Reminders.canNotify(MainActivity.this))
                 runOnUiThread(() -> notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS));
+        }
+        @JavascriptInterface public boolean appLockAvailable() { return lockAvailable(); }
+        @JavascriptInterface public boolean getAppLock() { return lockEnabled(); }
+        @JavascriptInterface public void setAppLock(boolean enabled) {
+            getSharedPreferences("lock", MODE_PRIVATE).edit().putBoolean("enabled", enabled && lockAvailable()).apply();
         }
         @JavascriptInterface public void setThemeColor(String hex) {
             try {
