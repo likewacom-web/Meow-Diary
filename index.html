@@ -382,7 +382,7 @@ body.dark .note{border-color:#40374a}
 <label class="wide">Checklist / To-do <div id="checklistBox" class="checklistBox"></div><div style="display:flex;gap:6px;margin-top:5px"><input id="checkNew" type="text" placeholder="เพิ่มรายการ..." style="flex:1"><button id="checkAdd" type="button">＋ เพิ่ม</button></div></label>
 <label class="wide">สติกเกอร์ตกแต่ง<div id="noteStickers" class="stickerRow"><button type="button" class="stickerChoice" data-sticker="🐱">🐱</button><button type="button" class="stickerChoice" data-sticker="🐾">🐾</button><button type="button" class="stickerChoice" data-sticker="⭐">⭐</button><button type="button" class="stickerChoice" data-sticker="💗">💗</button></div></label>
 <label class="wide">วาดภาพ / เขียนมือ<div class="canvasWrap"><canvas id="drawCanvas" width="700" height="230"></canvas><div class="canvasActions"><button type="button" id="drawClear">ล้างภาพ</button><button type="button" id="drawSave">แนบภาพวาด</button><span id="drawStatus" style="font-size:11px;color:var(--muted)"></span></div></div></label>
-<label class="wide">แนบรูปภาพหรือไฟล์<input id="noteFiles" type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx,.xlsx,.csv,.mp3,.m4a,.wav,.webm"></label>
+<label class="wide" id="driveAttachmentLabel">แนบรูปภาพหรือไฟล์<input id="noteFiles" type="file" multiple accept="image/*,.pdf,.txt,.doc,.docx,.xlsx,.csv,.mp3,.m4a,.wav,.webm"></label><div class="wide" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" id="connectDriveBtn">☁️ เชื่อมต่อ Google Drive</button><span id="driveStatus" role="status" style="font-size:12px;color:var(--muted)">รูปใหม่จะเก็บใน Google Drive</span></div>
 <label class="wide">บันทึกเสียงในโน้ต<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="recordVoice">● เริ่มอัดเสียง</button><button type="button" id="stopVoice" disabled>■ หยุด</button><span id="voiceStatus" style="font-size:12px;color:var(--muted)"></span></div></label>
 <div class="wide"><div id="attachmentList" class="attachList"></div><button type="button" id="aiSummary">✨ สรุปโน้ตด้วย AI แบบออฟไลน์</button><span id="aiResult" style="font-size:12px;color:var(--muted)"></span></div>
 </div>
@@ -400,7 +400,7 @@ const safeStorage = (() => {
 })();
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, reauthenticateWithPopup } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
 
@@ -485,6 +485,74 @@ const languagePanelText={
  vi:{button:'Ngôn ngữ',title:'🌐 Đổi ngôn ngữ',label:'Chọn ngôn ngữ của bạn',hint:'Bạn có thể đổi ngôn ngữ bất cứ lúc nào. Lựa chọn được lưu trên thiết bị này.',close:'Đóng'},
  hi:{button:'भाषा',title:'🌐 भाषा बदलें',label:'अपनी भाषा चुनें',hint:'आप कभी भी भाषा बदल सकते हैं। आपकी पसंद इस डिवाइस पर सहेजी जाएगी।',close:'बंद करें'}
 };
+
+const driveI18n={
+ th:{connect:'☁️ เชื่อมต่อ Google Drive',connected:'เชื่อมต่อ Drive แล้ว ✓',notConnected:'ต้องเชื่อมต่อ Google Drive ก่อนแนบไฟล์',uploading:'กำลังอัปโหลดไปยัง Drive…',uploaded:'อัปโหลดรูปไปยัง Google Drive แล้ว ✓',reconnect:'สิทธิ์ Drive หมดอายุ กรุณาเชื่อมต่อใหม่',connectHint:'รูปใหม่จะเก็บใน Google Drive',deleteConfirm:'ลบไฟล์นี้ออกจาก Google Drive ด้วยหรือไม่?',deleteFailed:'ลบไฟล์จาก Drive ไม่สำเร็จ',uploadFailed:'อัปโหลดไป Drive ไม่สำเร็จ',needLogin:'กรุณาเข้าสู่ระบบ Google ก่อน',setup:'ต้องเปิดใช้ Google Drive API ใน Google Cloud ก่อนใช้งาน'},
+ en:{connect:'☁️ Connect Google Drive',connected:'Drive connected ✓',notConnected:'Connect Google Drive before attaching files',uploading:'Uploading to Drive…',uploaded:'Uploaded to Google Drive ✓',reconnect:'Drive access expired. Please reconnect.',connectHint:'New attachments are saved to Google Drive',deleteConfirm:'Also delete this file from Google Drive?',deleteFailed:'Could not delete file from Drive',uploadFailed:'Drive upload failed',needLogin:'Please sign in with Google first',setup:'Enable the Google Drive API in Google Cloud before use'},
+ es:{connect:'☁️ Conectar Google Drive',connected:'Drive conectado ✓',notConnected:'Conecta Google Drive antes de adjuntar archivos',uploading:'Subiendo a Drive…',uploaded:'Subido a Google Drive ✓',reconnect:'El acceso a Drive caducó. Vuelve a conectar.',connectHint:'Los nuevos archivos se guardan en Google Drive',deleteConfirm:'¿Eliminar también este archivo de Google Drive?',deleteFailed:'No se pudo eliminar el archivo de Drive',uploadFailed:'Error al subir a Drive',needLogin:'Inicia sesión con Google primero',setup:'Activa la API de Google Drive en Google Cloud antes de usarla'},
+ fr:{connect:'☁️ Connecter Google Drive',connected:'Drive connecté ✓',notConnected:'Connectez Google Drive avant de joindre des fichiers',uploading:'Envoi vers Drive…',uploaded:'Envoyé vers Google Drive ✓',reconnect:'L’accès à Drive a expiré. Reconnectez-vous.',connectHint:'Les nouvelles pièces jointes sont enregistrées sur Google Drive',deleteConfirm:'Supprimer aussi ce fichier de Google Drive ?',deleteFailed:'Impossible de supprimer le fichier de Drive',uploadFailed:'Échec du téléversement vers Drive',needLogin:'Connectez-vous d’abord avec Google',setup:'Activez l’API Google Drive dans Google Cloud avant utilisation'},
+ de:{connect:'☁️ Google Drive verbinden',connected:'Drive verbunden ✓',notConnected:'Verbinde Google Drive, bevor du Dateien anhängst',uploading:'Upload zu Drive…',uploaded:'Auf Google Drive hochgeladen ✓',reconnect:'Drive-Zugriff abgelaufen. Bitte erneut verbinden.',connectHint:'Neue Anhänge werden in Google Drive gespeichert',deleteConfirm:'Diese Datei auch aus Google Drive löschen?',deleteFailed:'Datei konnte nicht aus Drive gelöscht werden',uploadFailed:'Drive-Upload fehlgeschlagen',needLogin:'Bitte zuerst mit Google anmelden',setup:'Aktiviere vor der Nutzung die Google Drive API in Google Cloud'},
+ ja:{connect:'☁️ Google Drive に接続',connected:'Drive に接続しました ✓',notConnected:'ファイルを添付する前に Google Drive に接続してください',uploading:'Drive にアップロード中…',uploaded:'Google Drive にアップロードしました ✓',reconnect:'Drive のアクセス期限が切れました。再接続してください。',connectHint:'新しい添付ファイルは Google Drive に保存されます',deleteConfirm:'このファイルも Google Drive から削除しますか？',deleteFailed:'Drive からファイルを削除できませんでした',uploadFailed:'Drive へのアップロードに失敗しました',needLogin:'先に Google にログインしてください',setup:'使用前に Google Cloud で Google Drive API を有効にしてください'},
+ ko:{connect:'☁️ Google Drive 연결',connected:'Drive 연결됨 ✓',notConnected:'파일을 첨부하기 전에 Google Drive를 연결하세요',uploading:'Drive에 업로드 중…',uploaded:'Google Drive에 업로드됨 ✓',reconnect:'Drive 액세스가 만료되었습니다. 다시 연결하세요.',connectHint:'새 첨부 파일은 Google Drive에 저장됩니다',deleteConfirm:'이 파일도 Google Drive에서 삭제할까요?',deleteFailed:'Drive에서 파일을 삭제하지 못했습니다',uploadFailed:'Drive 업로드 실패',needLogin:'먼저 Google에 로그인하세요',setup:'사용 전에 Google Cloud에서 Google Drive API를 사용 설정하세요'},
+ zh:{connect:'☁️ 连接 Google Drive',connected:'Drive 已连接 ✓',notConnected:'添加文件前请先连接 Google Drive',uploading:'正在上传到 Drive…',uploaded:'已上传到 Google Drive ✓',reconnect:'Drive 访问权限已过期，请重新连接。',connectHint:'新附件将保存到 Google Drive',deleteConfirm:'是否同时从 Google Drive 删除此文件？',deleteFailed:'无法从 Drive 删除文件',uploadFailed:'上传到 Drive 失败',needLogin:'请先使用 Google 登录',setup:'使用前请在 Google Cloud 中启用 Google Drive API'},
+ pt:{connect:'☁️ Conectar Google Drive',connected:'Drive conectado ✓',notConnected:'Conecte o Google Drive antes de anexar arquivos',uploading:'Enviando para o Drive…',uploaded:'Enviado para o Google Drive ✓',reconnect:'O acesso ao Drive expirou. Conecte novamente.',connectHint:'Novos anexos são salvos no Google Drive',deleteConfirm:'Excluir este arquivo também do Google Drive?',deleteFailed:'Não foi possível excluir o arquivo do Drive',uploadFailed:'Falha no envio para o Drive',needLogin:'Entre com o Google primeiro',setup:'Ative a API do Google Drive no Google Cloud antes de usar'},
+ id:{connect:'☁️ Hubungkan Google Drive',connected:'Drive terhubung ✓',notConnected:'Hubungkan Google Drive sebelum melampirkan file',uploading:'Mengunggah ke Drive…',uploaded:'Diunggah ke Google Drive ✓',reconnect:'Akses Drive kedaluwarsa. Hubungkan kembali.',connectHint:'Lampiran baru disimpan di Google Drive',deleteConfirm:'Hapus file ini juga dari Google Drive?',deleteFailed:'Tidak dapat menghapus file dari Drive',uploadFailed:'Gagal mengunggah ke Drive',needLogin:'Masuk dengan Google terlebih dahulu',setup:'Aktifkan Google Drive API di Google Cloud sebelum digunakan'},
+ vi:{connect:'☁️ Kết nối Google Drive',connected:'Đã kết nối Drive ✓',notConnected:'Hãy kết nối Google Drive trước khi đính kèm tệp',uploading:'Đang tải lên Drive…',uploaded:'Đã tải lên Google Drive ✓',reconnect:'Quyền truy cập Drive đã hết hạn. Hãy kết nối lại.',connectHint:'Tệp đính kèm mới được lưu vào Google Drive',deleteConfirm:'Xóa tệp này khỏi Google Drive luôn không?',deleteFailed:'Không thể xóa tệp khỏi Drive',uploadFailed:'Tải lên Drive thất bại',needLogin:'Vui lòng đăng nhập Google trước',setup:'Bật Google Drive API trong Google Cloud trước khi sử dụng'},
+ hi:{connect:'☁️ Google Drive कनेक्ट करें',connected:'Drive कनेक्ट हो गया ✓',notConnected:'फ़ाइल जोड़ने से पहले Google Drive कनेक्ट करें',uploading:'Drive पर अपलोड हो रहा है…',uploaded:'Google Drive पर अपलोड हो गया ✓',reconnect:'Drive की अनुमति समाप्त हो गई। फिर से कनेक्ट करें।',connectHint:'नई अटैचमेंट Google Drive में सेव होंगी',deleteConfirm:'क्या इस फ़ाइल को Google Drive से भी हटाएँ?',deleteFailed:'Drive से फ़ाइल नहीं हटाई जा सकी',uploadFailed:'Drive पर अपलोड विफल',needLogin:'पहले Google से साइन इन करें',setup:'उपयोग से पहले Google Cloud में Google Drive API चालू करें'}
+};
+function driveText(key){return (driveI18n[language]||driveI18n.en)[key]||driveI18n.en[key]||key}
+function applyDriveLanguage(){
+ const b=$('connectDriveBtn'),s=$('driveStatus');
+ if(b)b.textContent=driveText('connect');
+ if(s)s.textContent=driveTokenValid()?driveText('connected'):driveText('connectHint');
+}
+function driveTokenValid(){try{return !!sessionStorage.getItem('meow-drive-token')&&Number(sessionStorage.getItem('meow-drive-expiry')||0)>Date.now()+30000}catch{return false}}
+function storeDriveToken(token,expiresIn=3600){sessionStorage.setItem('meow-drive-token',token);sessionStorage.setItem('meow-drive-expiry',String(Date.now()+Math.max(60,Number(expiresIn)||3600)*1000))}
+function clearDriveToken(){try{sessionStorage.removeItem('meow-drive-token');sessionStorage.removeItem('meow-drive-expiry')}catch{}}
+function captureDriveToken(result){
+ try{const credential=GoogleAuthProvider.credentialFromResult(result);if(credential?.accessToken){storeDriveToken(credential.accessToken,3600);applyDriveLanguage();return true}}catch{}
+ return false;
+}
+async function connectGoogleDrive(){
+ if(!currentUser){toast(driveText('needLogin'));return}
+ const btn=$('connectDriveBtn');if(btn)btn.disabled=true;
+ try{
+  const provider=new GoogleAuthProvider();provider.addScope('https://www.googleapis.com/auth/drive.file');
+  const result=await reauthenticateWithPopup(currentUser,provider);
+  if(!captureDriveToken(result))throw new Error(driveText('reconnect'));
+  $('driveStatus').textContent=driveText('connected');toast(driveText('connected'));
+ }catch(e){toast((e.message||driveText('setup')))}finally{if(btn)btn.disabled=false}
+}
+async function driveApi(path,options={}){
+ const token=sessionStorage.getItem('meow-drive-token');
+ if(!driveTokenValid()||!token)throw new Error(driveText('reconnect'));
+ const response=await fetch('https://www.googleapis.com/drive/v3/'+path,{...options,headers:{Authorization:'Bearer '+token,...(options.headers||{})}});
+ if(!response.ok){let message='HTTP '+response.status;try{message=(await response.json()).error?.message||message}catch{};if(response.status===401||response.status===403)clearDriveToken();throw new Error(message)}
+ return response.status===204?null:response.json();
+}
+async function uploadToGoogleDrive(file){
+ if(!driveTokenValid())throw new Error(driveText('reconnect'));
+ const boundary='meowDiaryBoundary'+crypto.randomUUID().replace(/-/g,'');
+ const metadata={name:file.name,mimeType:file.type||'application/octet-stream',description:'Meow Diary attachment'};
+ const body=new Blob([
+  '--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n',
+  '--'+boundary+'\r\nContent-Type: '+(file.type||'application/octet-stream')+'\r\n\r\n',
+  file,'\r\n--'+boundary+'--'
+ ],{type:'multipart/related; boundary='+boundary});
+ const token=sessionStorage.getItem('meow-drive-token');
+ const response=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink,size',{
+  method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'multipart/related; boundary='+boundary},body
+ });
+ if(!response.ok){let message='HTTP '+response.status;try{message=(await response.json()).error?.message||message}catch{};if(response.status===401||response.status===403)clearDriveToken();throw new Error(message)}
+ const f=await response.json();
+ return {name:f.name||file.name,url:f.webViewLink||('https://drive.google.com/file/d/'+f.id+'/view'),driveId:f.id,type:f.mimeType||file.type||'application/octet-stream',size:Number(f.size)||file.size,provider:'google-drive'};
+}
+async function deleteDriveFile(attachment){
+ if(!attachment?.driveId)return true;
+ await driveApi('files/'+encodeURIComponent(attachment.driveId),{method:'DELETE'});
+ return true;
+}
+
 function applyLanguage(){
  const lp=languagePanelText[language]||languagePanelText.en;
  const quickLabel=$('languageQuickLabel');if(quickLabel)quickLabel.textContent=lp.button;
@@ -513,6 +581,7 @@ function applyLanguage(){
  $('settingsAccountStatus').textContent=currentUser?(currentUser.email||'Google') :tr('notSignedIn');
  $('googleSignIn').lastChild.textContent=tr('signIn');
  applyExtraLanguage();
+ applyDriveLanguage();
  render();
 }
 
@@ -598,12 +667,14 @@ function watchNotes(){
 }
 async function uploadAttachments(noteId){
  const files=[...($('noteFiles').files||[])];const uploaded=[...existingAttachments];
- if(files.length&&!storage){toast('ต้องเปิด Firebase Storage ก่อนแนบไฟล์');return uploaded}
+ if(files.length&&!driveTokenValid())throw new Error(driveText('reconnect'));
  for(const file of files){
-  if(file.size>10*1024*1024){toast(`ข้าม ${file.name}: ไฟล์ใหญ่เกิน 10 MB`);continue}
-  const path=`users/${currentUser.uid}/notes/${noteId}/${Date.now()}_${file.name.replace(/[^\w.\-ก-๙]/g,'_')}`;
-  const r=storageRef(storage,path);await uploadBytes(r,file);uploaded.push({name:file.name,url:await getDownloadURL(r),path,type:file.type||'application/octet-stream',size:file.size});
+  if(file.size>10*1024*1024){toast(`${file.name}: ${language==='th'?'ไฟล์ใหญ่เกิน 10 MB':'File exceeds 10 MB'}`);continue}
+  $('driveStatus').textContent=driveText('uploading');
+  const item=await uploadToGoogleDrive(file);
+  uploaded.push(item);
  }
+ $('driveStatus').textContent=files.length?driveText('uploaded'):(driveTokenValid()?driveText('connected'):driveText('connectHint'));
  return uploaded;
 }
 async function saveNote(){
@@ -613,7 +684,7 @@ async function saveNote(){
  const reminder=$('noteReminder').value?new Date($('noteReminder').value).toISOString():'';
  const data={id,title,body,colorIndex:selectedColor,pinned:$('notePinned').checked,category:$('noteCategory').value,mood:$('noteMood').value||'',stickers:selectedStickers,favorite:$('noteFavorite').checked,checklist:checkItems,reminderAt:reminder,attachments:existingAttachments,drawingData:drawingData||old?.drawingData||'',deletedAt:null,locked:!!old?.locked,createdAt:old?.createdAt||Date.now(),updatedAt:Date.now()};
  if(!currentUser){notes=[data,...notes.filter(n=>n.id!==id)];safeStorage.setItem('meow-local-notes',JSON.stringify(notes));render();closeEditor();toast('บันทึกในอุปกรณ์นี้แล้ว ✓');return}
- try{data.attachments=await uploadAttachments(id);await setDoc(doc(noteCollection(),id),{...data,updatedAt:serverTimestamp()},{merge:true});closeEditor();toast(tr('saved'))}catch(e){toast('บันทึกไม่สำเร็จ: '+e.message)}
+ try{data.attachments=await uploadAttachments(id);await setDoc(doc(noteCollection(),id),{...data,updatedAt:serverTimestamp()},{merge:true});closeEditor();toast(tr('saved'))}catch(e){toast(driveText('uploadFailed')+': '+e.message)}
 }
 function drawChecklist(items=[]){
  checkItems=items.map(x=>({...x}));const box=$('checklistBox');
@@ -650,7 +721,7 @@ const purge=e.target.closest('[data-purge]');if(purge){e.stopPropagation();if(co
 const cr=e.target.closest('[data-checkdone]');if(cr){checkItems[Number(cr.dataset.checkdone)].done=cr.checked;return}
 const ct=e.target.closest('[data-checktext]');if(ct){checkItems[Number(ct.dataset.checktext)].text=ct.value;return}
 const rem=e.target.closest('[data-checkremove]');if(rem){checkItems.splice(Number(rem.dataset.checkremove),1);drawChecklist(checkItems);return}
-const ar=e.target.closest('[data-attachremove]');if(ar){existingAttachments.splice(Number(ar.dataset.attachremove),1);drawAttachments();return}
+const ar=e.target.closest('[data-attachremove]');if(ar){const idx=Number(ar.dataset.attachremove),item=existingAttachments[idx];(async()=>{try{if(item?.provider==='google-drive'&&item.driveId&&driveTokenValid()&&confirm(driveText('deleteConfirm')))await deleteDriveFile(item);existingAttachments.splice(idx,1);drawAttachments()}catch(err){toast(driveText('deleteFailed')+': '+err.message)}})();return}
 const card=e.target.closest('[data-open]');if(card){const n=notes.find(x=>x.id===card.dataset.open);if(n&&!n.deletedAt)openEditor(n)}});
 $('notes').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-open]')){e.preventDefault();const n=notes.find(x=>x.id===e.target.dataset.open);if(n)openEditor(n)}});
 $('overlay').addEventListener('click',e=>{if(e.target===$('overlay'))closeEditor()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEditor();if((e.ctrlKey||e.metaKey)&&e.key==='Enter')saveNote()});
@@ -723,9 +794,10 @@ if('Notification'in window && Notification.permission==='default'){/* ask only w
 
 $('googleSignIn').addEventListener('click',async()=>{
  if(!configured){toast('ต้องใส่ Firebase config ใน index.html ก่อน');$('notice').textContent='เปิด SETUP.md แล้วทำตามขั้นตอน จากนั้นใส่ค่าจาก Firebase Web App ลงใน firebaseConfig';return}
- try{const provider=new GoogleAuthProvider();await signInWithPopup(auth,provider)}catch(e){if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e.code)){try{await signInWithRedirect(auth,new GoogleAuthProvider())}catch(err){toast(err.message)}}else toast('เข้าสู่ระบบไม่สำเร็จ: '+e.message)}
+ try{const provider=new GoogleAuthProvider();provider.addScope('https://www.googleapis.com/auth/drive.file');const result=await signInWithPopup(auth,provider);captureDriveToken(result)}catch(e){if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e.code)){try{await signInWithRedirect(auth,new GoogleAuthProvider())}catch(err){toast(err.message)}}else toast('เข้าสู่ระบบไม่สำเร็จ: '+e.message)}
 });
-$('googleSignOut').addEventListener('click',()=>signOut(auth).catch(e=>toast(e.message)));
+$('googleSignOut').addEventListener('click',()=>{clearDriveToken();signOut(auth).catch(e=>toast(e.message))});
+$('connectDriveBtn').addEventListener('click',connectGoogleDrive);
 
 $('languageSelect').value=language;
 $('settingsOpen').addEventListener('click',()=>{$('settingsOverlay').classList.add('show');document.body.style.overflow='hidden';$('settingsAccountStatus').textContent=currentUser?(currentUser.email||'Google'):tr('notSignedIn')});
@@ -733,7 +805,8 @@ function closeSettings(){$('settingsOverlay').classList.remove('show');document.
 $('settingsClose').addEventListener('click',closeSettings);$('settingsDone').addEventListener('click',closeSettings);
 $('settingsOverlay').addEventListener('click',e=>{if(e.target===$('settingsOverlay'))closeSettings()});
 $('languageSelect').addEventListener('change',e=>{language=e.target.value;safeStorage.setItem('note-language',language);applyLanguage()});
-function openLanguagePanel(){const o=$('languageOverlay');if(o){o.classList.add('show');$('languageQuickSelect').value=language;document.body.style.overflow='hidden';setTimeout(()=>$('languageQuickSelect').focus(),30)}}
+function openLanguagePanel(){const o=$('languageOverlay');if(o){o.classList.add('show');$('languageQuickSelect').value=language;
+applyDriveLanguage();document.body.style.overflow='hidden';setTimeout(()=>$('languageQuickSelect').focus(),30)}}
 function closeLanguagePanel(){const o=$('languageOverlay');if(o)o.classList.remove('show');document.body.style.overflow=''}
 $('languageQuickOpen').addEventListener('click',openLanguagePanel);$('languagePanelClose').addEventListener('click',closeLanguagePanel);$('languageOverlay').addEventListener('click',e=>{if(e.target===$('languageOverlay'))closeLanguagePanel()});
 $('languageQuickSelect').addEventListener('change',e=>{language=e.target.value;safeStorage.setItem('note-language',language);$('languageSelect').value=language;applyLanguage();});
@@ -744,7 +817,7 @@ $('settingsSignIn').addEventListener('click',()=>{$('settingsOverlay').classList
 if(configured){
  try{
   app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);storage=getStorage(app);
-  getRedirectResult(auth).catch(e=>toast('เข้าสู่ระบบไม่สำเร็จ: '+e.message));
+  getRedirectResult(auth).then(result=>{if(result)captureDriveToken(result)}).catch(e=>toast('เข้าสู่ระบบไม่สำเร็จ: '+e.message));
   onAuthStateChanged(auth,user=>{
    currentUser=user;
    $('googleSignIn').hidden=!!user;$('googleSignOut').hidden=!user;
