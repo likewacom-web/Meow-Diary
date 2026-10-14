@@ -320,7 +320,8 @@ body.dark .imageActions button{background:#2c2837;border-color:#40374a}
 .imgTools button{width:34px;height:34px;border:0;border-radius:50%;background:#000000a0;color:#fff;font-size:17px;line-height:1;font-weight:800}
 body.dark .richBody{background:#2c2837;border-color:#40374a;color:var(--ink)}
 
-.inlineImg img{-webkit-touch-callout:none;-webkit-user-drag:none}
+.inlineImg img{-webkit-touch-callout:none;-webkit-user-drag:none;pointer-events:none}
+.inlineImg{-webkit-touch-callout:none;-webkit-user-select:none;cursor:zoom-in}
 .inlineImg.dragging{opacity:.45;transform:scale(.97);outline:3px dashed var(--purple);transition:transform .15s}
 body.imgDragging,body.imgDragging *{user-select:none!important;-webkit-user-select:none!important}
 body.imgDragging .editor{touch-action:none}
@@ -1038,7 +1039,7 @@ rich.addEventListener('click',e=>{
  if(e.target.closest('[data-imgremove]')){const next=fig.nextSibling;fig.remove();if(next&&next.nodeName==='DIV'&&!next.textContent&&next.previousSibling?.nodeName==='DIV'&&!next.previousSibling.textContent)next.remove();syncBodyFromRich();return}
  if(e.target.closest('[data-imgup]')){const prev=sib(fig,'previousSibling');if(prev){prev.before(fig);syncBodyFromRich()}return}
  if(e.target.closest('[data-imgdown]')){const next=sib(fig,'nextSibling');if(next){next.after(fig);syncBodyFromRich()}return}
- if(e.target.nodeName==='IMG'&&!imgDrag.justDropped)openImageViewer(e.target.src);
+ if(!e.target.closest('.imgTools')&&!imgDrag.justDropped)openImageViewer(fig.querySelector('img').src);
 });
 // Paste images as pictures and everything else as plain text.
 rich.addEventListener('paste',e=>{
@@ -1100,7 +1101,7 @@ addEventListener('pointermove',e=>{
 addEventListener('touchmove',e=>{if(imgDrag.active)e.preventDefault()},{passive:false});
 addEventListener('pointerup',()=>{if(imgDrag.active)endImgDrag(true);else cancelPress()});
 addEventListener('pointercancel',()=>{if(imgDrag.active)endImgDrag(false);else cancelPress()});
-rich.addEventListener('contextmenu',e=>{if(e.target.closest('figure.inlineImg'))e.preventDefault()});
+document.addEventListener('contextmenu',e=>{if(e.target.closest?.('figure.inlineImg')||imgDrag.fig)e.preventDefault()},true);
 rich.addEventListener('dragstart',e=>{if(e.target.closest('figure.inlineImg'))e.preventDefault()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('imgViewer').classList.remove('show')});
 $('close').addEventListener('click',closeEditor);$('save').addEventListener('click',saveNote);$('saveBottom').addEventListener('click',saveNote);$('search').addEventListener('input',render);

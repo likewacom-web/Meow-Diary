@@ -1,6 +1,6 @@
 // Meow Diary service worker: caches the app shell and the Firebase SDK so the
 // app opens and works offline. Note data is kept offline by Firestore itself.
-const CACHE = 'meow-diary-v7';
+const CACHE = 'meow-diary-v8';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/icon.svg'];
 const FIREBASE = 'https://www.gstatic.com/firebasejs/11.0.2/';
 const FIREBASE_MODULES = ['firebase-app.js', 'firebase-auth.js', 'firebase-firestore.js', 'firebase-storage.js'].map(f => FIREBASE + f);
