@@ -62,3 +62,15 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk meow-diary-test.apk
           gh release view test-build >/dev/null 2>&1 || gh release create test-build --prerelease --title "Meow Diary test build" --notes "APK สำหรับทดสอบ ติดตั้งบน Android ได้ทันที (อัปเดตอัตโนมัติทุกครั้งที่ build บน main)"
           gh release upload test-build meow-diary-test.apk --clobber
+
+      # Mirror the APK on GitHub Pages: likewacom-web.github.io/Meow-Diary/download/
+      - name: Publish test APK to the website download page
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          cp meow-diary-test.apk download/meow-diary-test.apk
+          git add download/meow-diary-test.apk
+          git diff --cached --quiet || git commit -m "Update test APK on download page [skip ci]"
+          git push origin HEAD:main
