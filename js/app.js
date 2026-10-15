@@ -30,6 +30,7 @@ if(window.MeowAndroid&&!('Notification' in window)){
 }
 // Android back button: close whatever is open before leaving the app.
 window.meowHandleBack=()=>{
+ const dlg=document.querySelector('.appDialog [data-v="0"]');if(dlg){dlg.click();return true}
  const shown=sel=>document.querySelector(sel+'.show');
  if(shown('#imgViewer')){$('imgViewer').classList.remove('show');return true}
  for(const id of ['addSheet','templateSheet','menuSheet'])if(shown('#'+id)){closeSheet(id);return true}
@@ -357,6 +358,24 @@ if(window.MeowAndroid?.setAppLock){
 }
 
 
+
+// ---- In-app dialogs (instead of the browser's prompt / confirm boxes) ----
+function appDialog({title='',message='',input=false,value='',placeholder='',ok='',cancel='',danger=false}={}){
+ return new Promise(resolve=>{
+  const wrap=document.createElement('div');wrap.className='appDialog';wrap.setAttribute('role','dialog');wrap.setAttribute('aria-modal','true');
+  wrap.innerHTML=`<section class="appDialogBox">${title?`<h3>${esc(title)}</h3>`:''}${message?`<p>${esc(message).replace(/\n/g,'<br>')}</p>`:''}${input?`<input type="text" maxlength="40" value="${esc(value)}" placeholder="${esc(placeholder)}" enterkeyhint="done">`:''}<div class="appDialogBtns"><button type="button" data-v="0">${esc(cancel||nt('cancel'))}</button><button type="button" data-v="1" class="${danger?'danger':'primary'}">${esc(ok||nt('ok'))}</button></div></section>`;
+  document.body.appendChild(wrap);
+  const field=wrap.querySelector('input');
+  const answer=yes=>input?(yes?field.value:null):yes;
+  const done=v=>{wrap.remove();document.removeEventListener('keydown',key,true);resolve(v)};
+  const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();done(answer(false))}else if(e.key==='Enter'&&field&&document.activeElement===field){e.preventDefault();done(answer(true))}};
+  document.addEventListener('keydown',key,true);
+  wrap.addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(b)done(answer(b.dataset.v==='1'));else if(e.target===wrap)done(answer(false))});
+  setTimeout(()=>(field||wrap.querySelector('[data-v="1"]')).focus(),30);
+ });
+}
+function appConfirm(message,opts={}){return appDialog({message,...opts})}
+function appPrompt(title,opts={}){return appDialog({title,input:true,...opts})}
 // ---- local notes, trash clean-up, repeating reminders ----
 function loadLocalNotes(){try{const l=JSON.parse(safeStorage.getItem('meow-local-notes')||'[]');return Array.isArray(l)?l:[]}catch{return []}}
 function noteText(n){return n.kind==='checklist'||(!n.body&&n.checklist?.length)?(n.checklist||[]).map(x=>(x.done?'☑ ':'☐ ')+x.text).join('\n'):stripImageTokens(n.body)}
@@ -365,8 +384,8 @@ function offerLocalImport(user){
  const local=loadLocalNotes();const key='meow-local-offered-'+user.uid;
  if(!local.length||safeStorage.getItem(key))return;
  safeStorage.setItem(key,'1');
- setTimeout(()=>{
-  if(!confirm(nt('importLocal').replace('{n}',local.length)))return;
+ setTimeout(async()=>{
+  if(!(await appConfirm(nt('importLocal').replace('{n}',local.length),{ok:nt('importOk')})))return;
   local.forEach(n=>{if(!n?.id)return;const {id,...data}=n;queueWrite(setDoc(doc(collection(db,'users',user.uid,'notes'),id),{...data,updatedAt:serverTimestamp()},{merge:true}))});
   safeStorage.removeItem('meow-local-notes');toast(nt('imported'));
  },600);
@@ -476,7 +495,7 @@ async function reauthForDelete(){
 }
 $('deleteAccount').addEventListener('click',async()=>{
  const signedIn=!!currentUser;
- if(!confirm(nt(signedIn?'deleteConfirm1':'deleteConfirmLocal'))||!confirm(nt('deleteConfirm2')))return;
+ if(!(await appConfirm(nt(signedIn?'deleteConfirm1':'deleteConfirmLocal'),{danger:true,ok:nt('deleteOk')}))||!(await appConfirm(nt('deleteConfirm2'),{danger:true,ok:nt('deleteOk')})))return;
  const btn=$('deleteAccount');btn.disabled=true;
  try{
   if(signedIn){
@@ -710,7 +729,7 @@ document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{fi
 $('colors').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(!b)return;selectedColor=Number(b.dataset.color);document.querySelectorAll('.swatch').forEach(x=>x.classList.toggle('selected',x===b))});
 $('notes').addEventListener('click',async e=>{const pin=e.target.closest('[data-pin]');if(pin){e.stopPropagation();const n=notes.find(x=>x.id===pin.dataset.pin);if(n&&!currentUser){n.pinned=!n.pinned;n.updatedAt=Date.now();safeStorage.setItem('meow-local-notes',JSON.stringify(notes));render()}else if(n&&currentUser)queueWrite(setDoc(doc(noteCollection(),n.id),{pinned:!n.pinned,updatedAt:serverTimestamp()},{merge:true}));return}const del=e.target.closest('[data-delete]');if(del){e.stopPropagation();if(!currentUser){notes=notes.map(n=>n.id===del.dataset.delete?{...n,deletedAt:new Date().toISOString(),updatedAt:Date.now()}:n);safeStorage.setItem('meow-local-notes',JSON.stringify(notes));render();toast('ย้ายไปถังขยะแล้ว')}else{queueWrite(setDoc(doc(noteCollection(),del.dataset.delete),{deletedAt:new Date().toISOString(),updatedAt:serverTimestamp()},{merge:true}));toast('ย้ายไปถังขยะแล้ว')}return}
 const restore=e.target.closest('[data-restore]');if(restore){e.stopPropagation();if(!currentUser){notes=notes.map(n=>n.id===restore.dataset.restore?{...n,deletedAt:null,updatedAt:Date.now()}:n);safeStorage.setItem('meow-local-notes',JSON.stringify(notes));render();toast('กู้คืนโน้ตแล้ว')}else{queueWrite(setDoc(doc(noteCollection(),restore.dataset.restore),{deletedAt:null,updatedAt:serverTimestamp()},{merge:true}));toast('กู้คืนโน้ตแล้ว')}return}
-const purge=e.target.closest('[data-purge]');if(purge){e.stopPropagation();if(confirm('ลบโน้ตนี้ถาวร?')){if(!currentUser){notes=notes.filter(n=>n.id!==purge.dataset.purge);safeStorage.setItem('meow-local-notes',JSON.stringify(notes));render();toast('ลบถาวรแล้ว')}else{queueWrite(deleteDoc(doc(noteCollection(),purge.dataset.purge)));toast('ลบถาวรแล้ว')}}return}
+const purge=e.target.closest('[data-purge]');if(purge){e.stopPropagation();if(await appConfirm(nt('purgeConfirm'),{danger:true,ok:nt('purgeOk')})){if(!currentUser){notes=notes.filter(n=>n.id!==purge.dataset.purge);safeStorage.setItem('meow-local-notes',JSON.stringify(notes));render();toast('ลบถาวรแล้ว')}else{queueWrite(deleteDoc(doc(noteCollection(),purge.dataset.purge)));toast('ลบถาวรแล้ว')}}return}
 const cr=e.target.closest('[data-checkdone]');if(cr){checkItems[Number(cr.dataset.checkdone)].done=cr.checked;return}
 const ct=e.target.closest('[data-checktext]');if(ct){checkItems[Number(ct.dataset.checktext)].text=ct.value;return}
 const rem=e.target.closest('[data-checkremove]');if(rem){checkItems.splice(Number(rem.dataset.checkremove),1);drawChecklist(checkItems);return}
@@ -724,7 +743,7 @@ $('checkAdd').addEventListener('click',()=>{const v=$('checkNew').value.trim();i
 $('checklistBox').addEventListener('change',e=>{const b=e.target.closest('[data-checkdone]');if(b){checkItems[Number(b.dataset.checkdone)].done=b.checked}});
 $('checklistBox').addEventListener('input',e=>{const b=e.target.closest('[data-checktext]');if(b)checkItems[Number(b.dataset.checktext)].text=b.value});
 $('categoryFilter').addEventListener('change',render);
-$('newCategory').addEventListener('click',()=>{const name=prompt('ชื่อหมวดหมู่ใหม่');if(!name?.trim())return;const val=name.trim();if(![...$('categoryFilter').options].some(o=>o.value===val)){const a=new Option(val,val);$('categoryFilter').add(a);const b=new Option(val,val);$('noteCategory').add(b)}$('categoryFilter').value=val;render()});
+$('newCategory').addEventListener('click',async()=>{const name=await appPrompt(nt('newCategory'),{placeholder:nt('newCategoryHint')});if(!name?.trim())return;const val=name.trim();if(![...$('categoryFilter').options].some(o=>o.value===val)){const a=new Option(val,val);$('categoryFilter').add(a);const b=new Option(val,val);$('noteCategory').add(b)}$('categoryFilter').value=val;render()});
 $('themeToggle').addEventListener('click',()=>{window.meowThemeAutoOff?.();const dark=!document.body.classList.contains('dark');document.body.classList.toggle('dark',dark);safeStorage.setItem('note-dark',dark?'1':'0');$('themeToggle').textContent=dark?'☀️ ธีมสว่าง':'🌙 ธีมมืด';const cfg=JSON.parse(safeStorage.getItem('note-color-config')||'null')||colorPresets.lavender;const next={...cfg,bg:dark?'#211f29':'#fdf9ff',accent:dark?'#b8a5f2':cfg.accent,ink:dark?'#f2edf7':colorPresets.lavender.ink,notes:dark?colorPresets.night.notes:(cfg.notes||[]).every(c=>!isDarkHex(c))?cfg.notes:colorPresets.lavender.notes};applyColorConfig(next,true)});
 if(safeStorage.getItem('note-dark')==='1'){document.body.classList.add('dark');$('themeToggle').textContent='☀️ ธีมสว่าง'}
 $('exportTxt').addEventListener('click',()=>{const rows=notes.filter(n=>!n.deletedAt).map(n=>`${n.title||'ไม่มีชื่อ'}\n${n.category?'หมวดหมู่: '+n.category+'\n':''}${stripImageTokens(n.body,'[รูป]')}\n${(n.checklist||[]).map(x=>`${x.done?'[x]':'[ ]'} ${x.text}`).join('\n')}\n`).join('\n---\n\n');downloadText(rows,'note-export.txt','text/plain;charset=utf-8')});
@@ -855,7 +874,7 @@ $('statsClose').onclick=()=>$('statsModal').classList.remove('show');
 $('openBackup').onclick=()=>{$('backupStatus').textContent='';$('backupModal').classList.add('show')};$('backupClose').onclick=()=>$('backupModal').classList.remove('show');
 $('exportBackup').onclick=()=>{const payload={app:'Meow Diary',schemaVersion:1,exportedAt:new Date().toISOString(),notes,moods:JSON.parse(safeStorage.getItem('meow-moods')||'{}'),pet,missions:missionState(),settings:{language:safeStorage.getItem('note-language')||'th',dark:safeStorage.getItem('note-dark'),colorConfig:safeStorage.getItem('note-color-config'),noteColors:safeStorage.getItem('note-custom-note-colors')}};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`meow-diary-backup-${todayKey()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('backupStatus').textContent=et('backupReady')};
 $('importBackupBtn').onclick=()=>$('backupFile').click();
-$('backupFile').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());if(payload.app!=='Meow Diary'||payload.schemaVersion!==1)throw Error('schema');if(!confirm(et('confirmRestore')))return;let skippedNotes=false;if(Array.isArray(payload.notes)&&payload.notes.length){if(!currentUser||!db){const byId=new Map(loadLocalNotes().map(n=>[n.id,n]));payload.notes.forEach(n=>{if(n?.id)byId.set(n.id,n)});const merged=[...byId.values()];if(persistLocalNotes(merged)){notes=merged;render()}else skippedNotes=true}else{for(const n of payload.notes){if(!n.id)continue;const {id,...data}=n;queueWrite(setDoc(doc(noteCollection(),id),{...data,updatedAt:serverTimestamp()},{merge:true}))}}}if(payload.moods&&typeof payload.moods==='object')safeStorage.setItem('meow-moods',JSON.stringify(payload.moods));if(payload.pet&&typeof payload.pet==='object'){pet={...pet,...payload.pet};savePet()}if(payload.missions)safeStorage.setItem(MISSION_KEY,JSON.stringify(payload.missions));if(payload.settings){if(payload.settings.language&&extraI18n[payload.settings.language]){language=payload.settings.language;safeStorage.setItem('note-language',language);$('languageSelect').value=language}for(const [k,store] of [['dark','note-dark'],['colorConfig','note-color-config'],['noteColors','note-custom-note-colors']])if(payload.settings[k]!==undefined&&payload.settings[k]!==null)safeStorage.setItem(store,payload.settings[k]);if(payload.settings.colorConfig){try{applyColorConfig(JSON.parse(payload.settings.colorConfig),false)}catch{}}if(payload.settings.dark!==undefined)document.body.classList.toggle('dark',payload.settings.dark==='1')}applyLanguage();if(currentUser)watchNotes();renderPet();$('backupStatus').textContent=skippedNotes?et('restorePartial'):et('restoreDone')}catch(err){$('backupStatus').textContent=et('badBackup')}finally{e.target.value=''}});
+$('backupFile').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());if(payload.app!=='Meow Diary'||payload.schemaVersion!==1)throw Error('schema');if(!(await appConfirm(et('confirmRestore'))))return;let skippedNotes=false;if(Array.isArray(payload.notes)&&payload.notes.length){if(!currentUser||!db){const byId=new Map(loadLocalNotes().map(n=>[n.id,n]));payload.notes.forEach(n=>{if(n?.id)byId.set(n.id,n)});const merged=[...byId.values()];if(persistLocalNotes(merged)){notes=merged;render()}else skippedNotes=true}else{for(const n of payload.notes){if(!n.id)continue;const {id,...data}=n;queueWrite(setDoc(doc(noteCollection(),id),{...data,updatedAt:serverTimestamp()},{merge:true}))}}}if(payload.moods&&typeof payload.moods==='object')safeStorage.setItem('meow-moods',JSON.stringify(payload.moods));if(payload.pet&&typeof payload.pet==='object'){pet={...pet,...payload.pet};savePet()}if(payload.missions)safeStorage.setItem(MISSION_KEY,JSON.stringify(payload.missions));if(payload.settings){if(payload.settings.language&&extraI18n[payload.settings.language]){language=payload.settings.language;safeStorage.setItem('note-language',language);$('languageSelect').value=language}for(const [k,store] of [['dark','note-dark'],['colorConfig','note-color-config'],['noteColors','note-custom-note-colors']])if(payload.settings[k]!==undefined&&payload.settings[k]!==null)safeStorage.setItem(store,payload.settings[k]);if(payload.settings.colorConfig){try{applyColorConfig(JSON.parse(payload.settings.colorConfig),false)}catch{}}if(payload.settings.dark!==undefined)document.body.classList.toggle('dark',payload.settings.dark==='1')}applyLanguage();if(currentUser)watchNotes();renderPet();$('backupStatus').textContent=skippedNotes?et('restorePartial'):et('restoreDone')}catch(err){$('backupStatus').textContent=et('badBackup')}finally{e.target.value=''}});
 $('openWidget').onclick=()=>{$('widgetModal').classList.add('show');renderPet()};$('widgetClose').onclick=()=>$('widgetModal').classList.remove('show');$('widgetWrite').onclick=()=>{$('widgetModal').classList.remove('show');openEditor()};
 // Update cat care values gently over time, without creating pressure or penalties.
 function applyPetDailyDrift(){const d=todayKey();if(pet.lastDay!==d){pet.hunger=Math.max(25,pet.hunger-5);pet.happiness=Math.max(25,pet.happiness-3);pet.lastDay=d;savePet()}}
