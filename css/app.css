@@ -362,3 +362,17 @@ body.dark .editorbottom{border-color:#40374a}
 .sumH{font-size:14px;margin:18px 0 8px}
 .sumBar{display:flex;align-items:center;gap:8px;margin:6px 0}.sumBar span{font-size:20px;width:28px}.sumBar i{height:12px;border-radius:8px;background:var(--purple);display:block}.sumBar b{font-size:12px;color:var(--muted)}
 .sumEmpty{color:var(--muted);font-size:13px;text-align:center;padding:12px}
+
+/* ---- in-app dialogs ---- */
+.appDialog{position:fixed;inset:0;z-index:70;background:#2b203a73;display:flex;align-items:center;justify-content:center;padding:24px;animation:dlgFade .15s ease-out}
+.appDialogBox{width:min(360px,100%);background:var(--bg);color:var(--ink);border-radius:24px;padding:22px 20px 14px;box-shadow:0 20px 60px #1d123040;animation:dlgPop .18s ease-out}
+.appDialogBox h3{margin:0 0 12px;font-size:19px}
+.appDialogBox p{margin:0 0 14px;font-size:15px;line-height:1.55;color:var(--ink)}
+.appDialogBox input{width:100%;box-sizing:border-box;border:1.5px solid var(--lav);border-radius:14px;padding:12px 14px;font-size:16px;background:#fff;color:var(--ink);outline:none;margin-bottom:12px}
+.appDialogBox input:focus{border-color:var(--purple)}
+.appDialogBtns{display:flex;justify-content:flex-end;gap:8px}
+.appDialogBtns button{border:0;border-radius:14px;padding:11px 18px;font-weight:800;font-size:15px;background:transparent;color:var(--muted)}
+.appDialogBtns .primary{background:var(--purple);color:#fff}
+.appDialogBtns .danger{background:#c2456b;color:#fff}
+body.dark .appDialogBox input{background:#2c2837;border-color:#40374a}
+@keyframes dlgFade{from{opacity:0}}@keyframes dlgPop{from{transform:scale(.94);opacity:.5}}
