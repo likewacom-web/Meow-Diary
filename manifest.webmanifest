@@ -6,7 +6,7 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#fdf9f4",
   "theme_color": "#fdf9f4",
   "icons": [
@@ -27,6 +27,30 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "โน้ตใหม่",
+      "short_name": "โน้ตใหม่",
+      "url": "./?new=text",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "เช็กลิสต์ใหม่",
+      "short_name": "เช็กลิสต์",
+      "url": "./?new=checklist",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
