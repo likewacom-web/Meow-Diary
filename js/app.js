@@ -469,6 +469,25 @@ if(window.MeowAndroid?.saveBackup){
  // Give cloud notes a few seconds to arrive, then back up if the last one is a week old.
  setTimeout(()=>{if(on()&&Date.now()-Number(safeStorage.getItem('meow-backup-last')||0)>7*864e5)runBackup(true)},8000);
 }
+
+// ---- Desktop: install as an app, keyboard shortcuts, ?new= shortcuts ----
+let installPrompt=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;if(!window.MeowAndroid)$('installApp').hidden=false});
+addEventListener('appinstalled',()=>{installPrompt=null;$('installApp').hidden=true;toast(nt('installed'))});
+$('installApp').addEventListener('click',async()=>{if(!installPrompt)return;installPrompt.prompt();try{await installPrompt.userChoice}catch{}installPrompt=null;$('installApp').hidden=true});
+// Shortcuts from the installed app's icon menu (manifest "shortcuts").
+{const kind=new URLSearchParams(location.search).get('new');if(kind){history.replaceState(null,'',location.pathname);setTimeout(()=>window.meowQuickAction?.(kind==='checklist'?'checklist':'text'),400)}}
+document.addEventListener('keydown',e=>{
+ const typing=e.target.closest?.('input,textarea,select,[contenteditable="true"]');
+ const editorOpen=$('overlay').classList.contains('show');
+ const mod=e.ctrlKey||e.metaKey;
+ if(mod&&e.key.toLowerCase()==='s'&&editorOpen){e.preventDefault();saveNote();return}
+ if(mod&&e.key.toLowerCase()==='k'){e.preventDefault();if(editorOpen)return;$('navSearch').click();return}
+ if(typing||editorOpen||mod||e.altKey||document.querySelector('.appDialog,.sheetOverlay.show,.calendarModal.show'))return;
+ if(e.key==='n'||e.key==='N'){e.preventDefault();window.meowQuickAction('text')}
+ else if(e.key==='l'||e.key==='L'){e.preventDefault();window.meowQuickAction('checklist')}
+ else if(e.key==='/'){e.preventDefault();$('navSearch').click()}
+});
 // ---- Share a note to other apps ----
 function noteShareText(){
  const title=$('noteTitle').value.trim();
