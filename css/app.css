@@ -416,3 +416,10 @@ body.dark .appDialogBox input{background:#2c2837;border-color:#40374a}
 .inlineImg.small .imgTools{gap:3px;top:3px;right:3px}
 .inlineImg.small .imgTools button{width:26px;height:26px;font-size:13px}
 .inlineImg.small .imgResize{width:24px;height:24px}.inlineImg.small .imgResize::before{inset:7px}
+
+/* ---- update banner ---- */
+.updateBanner{display:flex;align-items:center;gap:8px;margin:12px 0 0;padding:10px 10px 10px 14px;border-radius:16px;background:var(--purple);color:#fff;font-weight:700;font-size:14px}
+.updateBanner>span{flex:1}
+.updateBanner button{border:0;border-radius:12px;padding:8px 14px;font-weight:800;background:#fff;color:var(--purple)}
+.updateBanner #updateLater{background:transparent;color:#fff;font-size:20px;padding:4px 8px}
+#appVersionText{font-size:12px;color:var(--muted)}

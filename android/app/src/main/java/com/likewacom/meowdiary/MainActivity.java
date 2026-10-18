@@ -41,6 +41,7 @@ import android.widget.FrameLayout;
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.activity.result.IntentSenderRequest;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
@@ -63,6 +64,12 @@ import androidx.credentials.exceptions.GetCredentialCancellationException;
 import androidx.credentials.exceptions.GetCredentialException;
 
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
+import com.google.android.play.core.appupdate.AppUpdateInfo;
+import com.google.android.play.core.appupdate.AppUpdateManager;
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
+import com.google.android.play.core.appupdate.AppUpdateOptions;
+import com.google.android.play.core.install.model.AppUpdateType;
+import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
 
 import org.json.JSONArray;
@@ -97,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
     private PermissionRequest pendingWebPermission;
     private WebView printView; // kept alive until printing has started
     private boolean pageReady;
+    private boolean pendingUpdateCheck = true; // check Google Play for an update once the page has loaded
     private Intent pendingIntent; // share / notification intent waiting for the page
 
     // App lock: fingerprint / face / screen lock, asked on open and after 60 s in the background.
@@ -157,6 +165,12 @@ public class MainActivity extends AppCompatActivity {
                 callPage("meowDictationResult", (text == null ? "null" : JSONObject.quote(text)) + "," + (text == null ? "\"cancelled\"" : "null"));
             });
 
+    // Google Play in-app updates (only for installs that came from Google Play).
+    private AppUpdateManager appUpdateManager;
+    private AppUpdateInfo pendingUpdate;
+    private final ActivityResultLauncher<IntentSenderRequest> updateLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartIntentSenderForResult(), result -> checkForUpdate(false));
+
     private final ActivityResultLauncher<String> micPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), granted -> {
                 if (pendingWebPermission == null) return;
@@ -213,6 +227,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 pageReady = true;
+                if (pendingUpdateCheck) { pendingUpdateCheck = false; checkForUpdate(false); }
                 if (pendingIntent != null) {
                     Intent i = pendingIntent;
                     pendingIntent = null;
@@ -402,6 +417,78 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        // An immediate update that was interrupted (e.g. app sent to background) continues here.
+        if (appUpdateManager != null) {
+            appUpdateManager.getAppUpdateInfo().addOnSuccessListener(info -> {
+                if (info.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) startUpdate(info);
+            });
+        }
+    }
+
+    private boolean installedFromPlay() {
+        try {
+            String installer = Build.VERSION.SDK_INT >= 30
+                    ? getPackageManager().getInstallSourceInfo(getPackageName()).getInstallingPackageName()
+                    : getPackageManager().getInstallerPackageName(getPackageName());
+            return "com.android.vending".equals(installer);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Asks Google Play whether a newer version exists and tells the page (meowUpdateInfo). */
+    private void checkForUpdate(boolean manual) {
+        if (!installedFromPlay()) {
+            sendUpdateInfo(false, 0, manual, "notPlay");
+            return;
+        }
+        if (appUpdateManager == null) appUpdateManager = AppUpdateManagerFactory.create(this);
+        appUpdateManager.getAppUpdateInfo()
+                .addOnSuccessListener(info -> {
+                    boolean available = info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                            && (info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE) || info.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE));
+                    pendingUpdate = available ? info : null;
+                    sendUpdateInfo(available, info.availableVersionCode(), manual, null);
+                })
+                .addOnFailureListener(e -> sendUpdateInfo(false, 0, manual, "error"));
+    }
+
+    private void sendUpdateInfo(boolean available, int versionCode, boolean manual, String reason) {
+        JSONObject o = new JSONObject();
+        try {
+            o.put("available", available).put("versionCode", versionCode).put("manual", manual)
+                    .put("fromPlay", installedFromPlay()).put("reason", reason == null ? JSONObject.NULL : reason);
+        } catch (Exception ignored) { }
+        callPage("meowUpdateInfo", o.toString());
+    }
+
+    private void startUpdate(AppUpdateInfo info) {
+        if (info == null || appUpdateManager == null) { openStorePage(); return; }
+        int type = info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE) ? AppUpdateType.IMMEDIATE : AppUpdateType.FLEXIBLE;
+        try {
+            appUpdateManager.startUpdateFlowForResult(info, updateLauncher, AppUpdateOptions.newBuilder(type).build());
+            if (type == AppUpdateType.FLEXIBLE) {
+                appUpdateManager.registerListener(state -> {
+                    if (state.installStatus() == com.google.android.play.core.install.model.InstallStatus.DOWNLOADED) appUpdateManager.completeUpdate();
+                });
+            }
+        } catch (Exception e) {
+            openStorePage();
+        }
+    }
+
+    private void openStorePage() {
+        Uri market = Uri.parse("market://details?id=" + getPackageName());
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, market));
+        } catch (ActivityNotFoundException e) {
+            openExternally(Uri.parse("https://play.google.com/store/apps/details?id=" + getPackageName()));
+        }
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
         if (!authenticating) backgroundedAt = SystemClock.elapsedRealtime();
@@ -571,6 +658,16 @@ public class MainActivity extends AppCompatActivity {
         }
         @JavascriptInterface public void startDictation(String lang) { runOnUiThread(() -> MainActivity.this.startDictation(lang)); }
         @JavascriptInterface public boolean saveBackup(String fileName, String json) { return MainActivity.this.saveBackup(fileName, json); }
+        @JavascriptInterface public void openExternal(String url) {
+            Uri u = Uri.parse(url);
+            if ("https".equals(u.getScheme())) runOnUiThread(() -> openExternally(u));
+        }
+        @JavascriptInterface public String appVersion() { return BuildConfig.VERSION_NAME; }
+        @JavascriptInterface public int appVersionCode() { return BuildConfig.VERSION_CODE; }
+        @JavascriptInterface public void checkForUpdate() { runOnUiThread(() -> MainActivity.this.checkForUpdate(true)); }
+        @JavascriptInterface public void startUpdate() {
+            runOnUiThread(() -> { if (pendingUpdate != null) MainActivity.this.startUpdate(pendingUpdate); else openStorePage(); });
+        }
         @JavascriptInterface public void shareText(String title, String text) { runOnUiThread(() -> MainActivity.this.shareText(title, text)); }
         @JavascriptInterface public boolean appLockAvailable() { return lockAvailable(); }
         @JavascriptInterface public boolean getAppLock() { return lockEnabled(); }
