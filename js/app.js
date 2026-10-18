@@ -488,6 +488,21 @@ document.addEventListener('keydown',e=>{
  else if(e.key==='l'||e.key==='L'){e.preventDefault();window.meowQuickAction('checklist')}
  else if(e.key==='/'){e.preventDefault();$('navSearch').click()}
 });
+
+// ---- App updates from Google Play (Android app) ----
+window.meowUpdateInfo=info=>{
+ if(info?.available){$('updateBanner').hidden=false;if(info.manual)toast(nt('updateAvailable'));return}
+ if(!info?.manual)return;
+ if(info.reason==='notPlay')appConfirm(nt('updateNotPlay'),{ok:nt('openDownload')}).then(ok=>{if(ok)window.MeowAndroid?.openExternal('https://likewacom-web.github.io/Meow-Diary/download/')});
+ else toast(nt(info.reason==='error'?'updateError':'updateNone'));
+};
+$('updateNow').addEventListener('click',()=>{$('updateBanner').hidden=true;window.MeowAndroid?.startUpdate()});
+$('updateLater').addEventListener('click',()=>$('updateBanner').hidden=true);
+if(window.MeowAndroid?.appVersion){
+ try{$('appVersionText').textContent=nt('version')+' '+window.MeowAndroid.appVersion();$('appVersionText').hidden=false}catch{}
+ $('checkUpdate').hidden=false;
+ $('checkUpdate').addEventListener('click',()=>{toast(nt('updateChecking'));window.MeowAndroid.checkForUpdate()});
+}
 // ---- Share a note to other apps ----
 function noteShareText(){
  const title=$('noteTitle').value.trim();
