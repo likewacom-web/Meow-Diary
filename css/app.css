@@ -242,7 +242,7 @@ body.dark .note{border-color:#40374a}
 #notes.list .noteMeta{grid-column:1;margin-top:4px}#notes.list .noteMeta:empty{display:none}
 #notes.list .notefoot{grid-column:2;grid-row:1/span 2;flex-direction:column;align-items:flex-end;gap:2px;margin:0;font-size:12px}
 #notes.list .notefoot time{flex:none;white-space:nowrap}
-#notes.list [data-pin],#notes.list [data-delete]{display:none}
+#notes.list [data-pin]{display:none}
 #notes.list .notefoot{display:grid;grid-template-columns:auto auto;justify-items:end}
 #notes.list .notefoot time{grid-column:1/span 2}
 #notes.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -429,3 +429,12 @@ body.dark .appDialogBox input{background:#2c2837;border-color:#40374a}
 .inlineImg.alignLeft{float:left;margin:4px 14px 8px 0}
 .inlineImg.alignRight{float:right;margin:4px 0 8px 14px}
 .inlineImg.alignLeft [data-imgalign],.inlineImg.alignRight [data-imgalign]{background:var(--purple)}
+
+/* ---- delete button on every note + undo toast ---- */
+.note [data-delete]{font-size:15px;opacity:.75}
+.note [data-delete]:hover,.note [data-delete]:focus-visible{opacity:1;background:#ffffff80}
+#notes.list .notefoot{grid-template-columns:auto;row-gap:2px}
+#notes.list .notefoot time{grid-column:1}
+#notes.list [data-delete]{display:inline-grid;place-items:center;width:34px;height:30px;padding:0}
+.toast.hasAction{pointer-events:auto;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 15px}
+.toastBtn{border:0;border-radius:10px;background:#ffffff26;color:#ffd6e7;font-weight:800;padding:7px 12px;font-size:13px}
