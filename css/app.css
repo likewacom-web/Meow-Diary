@@ -423,3 +423,9 @@ body.dark .appDialogBox input{background:#2c2837;border-color:#40374a}
 .updateBanner button{border:0;border-radius:12px;padding:8px 14px;font-weight:800;background:#fff;color:var(--purple)}
 .updateBanner #updateLater{background:transparent;color:#fff;font-size:20px;padding:4px 8px}
 #appVersionText{font-size:12px;color:var(--muted)}
+
+/* ---- text beside pictures ---- */
+.richBody{display:flow-root}
+.inlineImg.alignLeft{float:left;margin:4px 14px 8px 0}
+.inlineImg.alignRight{float:right;margin:4px 0 8px 14px}
+.inlineImg.alignLeft [data-imgalign],.inlineImg.alignRight [data-imgalign]{background:var(--purple)}
