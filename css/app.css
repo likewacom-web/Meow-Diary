@@ -407,3 +407,12 @@ body.dark .appDialogBox input{background:#2c2837;border-color:#40374a}
  .inlineImg img{max-height:520px}
 }
 @media (min-width:1400px){#notes.grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}}
+
+/* ---- resizable pictures ---- */
+.inlineImg{transition:width .08s}
+.inlineImg.resizing{transition:none;outline:2px solid var(--purple)}
+.imgResize{position:absolute;right:4px;bottom:4px;width:30px;height:30px;border-radius:50%;background:#ffffffe6;box-shadow:0 2px 8px #0003;cursor:nwse-resize;touch-action:none;z-index:2}
+.imgResize::before{content:"";position:absolute;inset:9px;border-right:3px solid var(--purple);border-bottom:3px solid var(--purple);border-radius:0 0 3px 0}
+.inlineImg.small .imgTools{gap:3px;top:3px;right:3px}
+.inlineImg.small .imgTools button{width:26px;height:26px;font-size:13px}
+.inlineImg.small .imgResize{width:24px;height:24px}.inlineImg.small .imgResize::before{inset:7px}

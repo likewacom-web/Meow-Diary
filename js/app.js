@@ -585,7 +585,7 @@ $('noteReminder').addEventListener('change',()=>{if($('noteReminder').value)try{
 const IMAGE_BUDGET=780000;
 const IMG_LINE=/^\[\[img:([\w-]+)\]\]$/;
 function stripImageTokens(t,repl=''){t=String(t||'');return (repl?t.replace(/\[\[img:[\w-]+\]\]/g,repl):t.replace(/^\[\[img:[\w-]+\]\]$\n?/gm,'')).trim()}
-function bodyToHtml(n){const byId=new Map((n.images||[]).map(im=>[im.id,im]));return String(n.body||'').split('\n').map(l=>{const m=l.match(IMG_LINE);return m&&byId.has(m[1])?`<img src="${esc(byId.get(m[1]).src)}" style="max-width:100%;border-radius:8px;margin:6px 0;display:block">`:esc(l)}).join('\n')}
+function bodyToHtml(n){const byId=new Map((n.images||[]).map(im=>[im.id,im]));return String(n.body||'').split('\n').map(l=>{const m=l.match(IMG_LINE);return m&&byId.has(m[1])?`<img src="${esc(byId.get(m[1]).src)}" style="width:${imgPct(byId.get(m[1]))}%;max-width:100%;border-radius:8px;margin:6px 0;display:block">`:esc(l)}).join('\n')}
 function persistLocalNotes(list){
  const json=JSON.stringify(list);
  try{localStorage.setItem('meow-local-notes',json);return localStorage.getItem('meow-local-notes').length===json.length}
@@ -607,7 +607,7 @@ const taValue=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'val
 let syncingRich=false,savedRange=null;
 // Code elsewhere (templates, AI) writes noteBody.value; mirror those writes into the editor.
 Object.defineProperty(bodyEl,'value',{configurable:true,get(){return taValue.get.call(bodyEl)},set(v){taValue.set.call(bodyEl,v);if(!syncingRich)renderRich()}});
-function figureHtml(im){return `<figure class="inlineImg" contenteditable="false" data-img="${esc(im.id)}"><img src="${esc(im.src)}" alt=""><span class="imgTools"><button type="button" data-imgup aria-label="ย้ายขึ้น">↑</button><button type="button" data-imgdown aria-label="ย้ายลง">↓</button><button type="button" data-imgremove aria-label="ลบรูป">×</button></span></figure>`}
+function figureHtml(im){const pct=imgPct(im);return `<figure class="inlineImg${pct<55?' small':''}" contenteditable="false" data-img="${esc(im.id)}" style="width:${pct}%"><img src="${esc(im.src)}" alt=""><span class="imgResize" data-imgresize aria-label="ลากเพื่อย่อหรือขยายรูป" title="ลากเพื่อย่อ/ขยาย"></span><span class="imgTools"><button type="button" data-imgsize aria-label="เปลี่ยนขนาดรูป" title="ขนาด">⤡</button><button type="button" data-imgup aria-label="ย้ายขึ้น">↑</button><button type="button" data-imgdown aria-label="ย้ายลง">↓</button><button type="button" data-imgremove aria-label="ลบรูป">×</button></span></figure>`}
 function renderRich(){
  noteImages.forEach(im=>{if(!im.id)im.id=Math.random().toString(36).slice(2,10)});
  const text=taValue.get.call(bodyEl),byId=new Map(noteImages.map(im=>[im.id,im])),used=new Set();
@@ -674,6 +674,8 @@ rich.addEventListener('mousedown',e=>{if(e.target.closest('.imgTools'))e.prevent
 rich.addEventListener('click',e=>{
  const fig=e.target.closest('figure.inlineImg');if(!fig)return;
  const sib=(n,dir)=>{n=n[dir];while(n&&n.nodeType===3&&!n.data.trim())n=n[dir];return n};
+ if(e.target.closest('[data-imgresize]'))return;
+ if(e.target.closest('[data-imgsize]')){const pct=imgPct(imageOf(fig));setImgPct(fig,pct>85?66:pct>55?40:100);return}
  if(e.target.closest('[data-imgremove]')){const next=fig.nextSibling;fig.remove();if(next&&next.nodeName==='DIV'&&!next.textContent&&next.previousSibling?.nodeName==='DIV'&&!next.previousSibling.textContent)next.remove();syncBodyFromRich();return}
  if(e.target.closest('[data-imgup]')){const prev=sib(fig,'previousSibling');if(prev){prev.before(fig);syncBodyFromRich()}return}
  if(e.target.closest('[data-imgdown]')){const next=sib(fig,'nextSibling');if(next){next.after(fig);syncBodyFromRich()}return}
@@ -691,6 +693,28 @@ $('takePhoto').addEventListener('click',()=>$('cameraPick').click());
 for(const id of ['imagePick','cameraPick'])$(id).addEventListener('change',async e=>{await addImageFiles(e.target.files||[]);e.target.value=''});
 $('imgViewer').addEventListener('click',()=>$('imgViewer').classList.remove('show'));
 
+
+// ---- Resize pictures in a note: drag the corner handle, or ⤡ to cycle full / medium / small ----
+function imgPct(im){const v=Number(im?.pct);return v>=20&&v<=100?Math.round(v):100}
+function imageOf(fig){return noteImages.find(im=>im.id===fig?.dataset.img)}
+function setImgPct(fig,pct){
+ pct=Math.max(20,Math.min(100,Math.round(pct)));const im=imageOf(fig);if(im)im.pct=pct;
+ fig.style.width=pct+'%';fig.classList.toggle('small',pct<55);
+}
+const imgResize={fig:null,startX:0,startW:0,boxW:1};
+rich.addEventListener('pointerdown',e=>{
+ const h=e.target.closest('[data-imgresize]');if(!h)return;
+ e.preventDefault();e.stopPropagation();
+ const fig=h.closest('figure.inlineImg');
+ Object.assign(imgResize,{fig,startX:e.clientX,startW:fig.getBoundingClientRect().width,boxW:rich.clientWidth||1});
+ fig.classList.add('resizing');try{h.setPointerCapture(e.pointerId)}catch{}
+});
+rich.addEventListener('pointermove',e=>{
+ if(!imgResize.fig)return;e.preventDefault();
+ setImgPct(imgResize.fig,(imgResize.startW+(e.clientX-imgResize.startX))/imgResize.boxW*100);
+});
+const endImgResize=()=>{if(!imgResize.fig)return;imgResize.fig.classList.remove('resizing');imgResize.fig=null};
+rich.addEventListener('pointerup',endImgResize);rich.addEventListener('pointercancel',endImgResize);
 // Long-press an image, then drag it to a new place in the text.
 const imgDrag={timer:null,fig:null,active:false,startX:0,startY:0,y:0,target:null,after:false,scroller:null,raf:0,justDropped:false};
 function scrollParent(el){for(let n=el.parentElement;n;n=n.parentElement){const o=getComputedStyle(n).overflowY;if((o==='auto'||o==='scroll')&&n.scrollHeight>n.clientHeight)return n}return document.scrollingElement}
@@ -727,7 +751,7 @@ function endImgDrag(drop){
  imgDrag.active=false;imgDrag.fig=null;
 }
 rich.addEventListener('pointerdown',e=>{
- const fig=e.target.closest('figure.inlineImg');if(!fig||e.target.closest('.imgTools')||(e.pointerType==='mouse'&&e.button!==0))return;
+ const fig=e.target.closest('figure.inlineImg');if(!fig||e.target.closest('.imgTools,.imgResize')||(e.pointerType==='mouse'&&e.button!==0))return;
  imgDrag.fig=fig;imgDrag.startX=e.clientX;imgDrag.startY=imgDrag.y=e.clientY;
  imgDrag.timer=setTimeout(startImgDrag,420);
 });
