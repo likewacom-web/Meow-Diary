@@ -600,7 +600,7 @@ $('noteReminder').addEventListener('change',()=>{if($('noteReminder').value)try{
 const IMAGE_BUDGET=780000;
 const IMG_LINE=/^\[\[img:([\w-]+)\]\]$/;
 function stripImageTokens(t,repl=''){t=String(t||'');return (repl?t.replace(/\[\[img:[\w-]+\]\]/g,repl):t.replace(/^\[\[img:[\w-]+\]\]$\n?/gm,'')).trim()}
-function bodyToHtml(n){const byId=new Map((n.images||[]).map(im=>[im.id,im]));return String(n.body||'').split('\n').map(l=>{const m=l.match(IMG_LINE);return m&&byId.has(m[1])?`<img src="${esc(byId.get(m[1]).src)}" style="width:${imgPct(byId.get(m[1]))}%;max-width:100%;border-radius:8px;margin:6px 0;display:block">`:esc(l)}).join('\n')}
+function bodyToHtml(n){const byId=new Map((n.images||[]).map(im=>[im.id,im]));return String(n.body||'').split('\n').map(l=>{const m=l.match(IMG_LINE);return m&&byId.has(m[1])?`<img src="${esc(byId.get(m[1]).src)}" style="width:${imgPct(byId.get(m[1]))}%;max-width:100%;border-radius:8px;${imgAlign(byId.get(m[1]))==='Left'?'float:left;margin:4px 14px 8px 0':imgAlign(byId.get(m[1]))==='Right'?'float:right;margin:4px 0 8px 14px':'margin:6px 0;display:block'}">`:esc(l)}).join('\n')}
 function persistLocalNotes(list){
  const json=JSON.stringify(list);
  try{localStorage.setItem('meow-local-notes',json);return localStorage.getItem('meow-local-notes').length===json.length}
@@ -622,7 +622,7 @@ const taValue=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'val
 let syncingRich=false,savedRange=null;
 // Code elsewhere (templates, AI) writes noteBody.value; mirror those writes into the editor.
 Object.defineProperty(bodyEl,'value',{configurable:true,get(){return taValue.get.call(bodyEl)},set(v){taValue.set.call(bodyEl,v);if(!syncingRich)renderRich()}});
-function figureHtml(im){const pct=imgPct(im);return `<figure class="inlineImg${pct<55?' small':''}" contenteditable="false" data-img="${esc(im.id)}" style="width:${pct}%"><img src="${esc(im.src)}" alt=""><span class="imgResize" data-imgresize aria-label="ลากเพื่อย่อหรือขยายรูป" title="ลากเพื่อย่อ/ขยาย"></span><span class="imgTools"><button type="button" data-imgsize aria-label="เปลี่ยนขนาดรูป" title="ขนาด">⤡</button><button type="button" data-imgup aria-label="ย้ายขึ้น">↑</button><button type="button" data-imgdown aria-label="ย้ายลง">↓</button><button type="button" data-imgremove aria-label="ลบรูป">×</button></span></figure>`}
+function figureHtml(im){const pct=imgPct(im),al=imgAlign(im);return `<figure class="inlineImg${pct<55?' small':''}${al?' align'+al:''}" contenteditable="false" data-img="${esc(im.id)}" style="width:${pct}%"><img src="${esc(im.src)}" alt=""><span class="imgResize" data-imgresize aria-label="ลากเพื่อย่อหรือขยายรูป" title="ลากเพื่อย่อ/ขยาย"></span><span class="imgTools"><button type="button" data-imgalign aria-label="วางข้อความข้างรูป" title="ข้อความข้างรูป">⇆</button><button type="button" data-imgsize aria-label="เปลี่ยนขนาดรูป" title="ขนาด">⤡</button><button type="button" data-imgup aria-label="ย้ายขึ้น">↑</button><button type="button" data-imgdown aria-label="ย้ายลง">↓</button><button type="button" data-imgremove aria-label="ลบรูป">×</button></span></figure>`}
 function renderRich(){
  noteImages.forEach(im=>{if(!im.id)im.id=Math.random().toString(36).slice(2,10)});
  const text=taValue.get.call(bodyEl),byId=new Map(noteImages.map(im=>[im.id,im])),used=new Set();
@@ -690,6 +690,7 @@ rich.addEventListener('click',e=>{
  const fig=e.target.closest('figure.inlineImg');if(!fig)return;
  const sib=(n,dir)=>{n=n[dir];while(n&&n.nodeType===3&&!n.data.trim())n=n[dir];return n};
  if(e.target.closest('[data-imgresize]'))return;
+ if(e.target.closest('[data-imgalign]')){const im=imageOf(fig),a=imgAlign(im);setImgAlign(fig,a===''?'Left':a==='Left'?'Right':'');return}
  if(e.target.closest('[data-imgsize]')){const pct=imgPct(imageOf(fig));setImgPct(fig,pct>85?66:pct>55?40:100);return}
  if(e.target.closest('[data-imgremove]')){const next=fig.nextSibling;fig.remove();if(next&&next.nodeName==='DIV'&&!next.textContent&&next.previousSibling?.nodeName==='DIV'&&!next.previousSibling.textContent)next.remove();syncBodyFromRich();return}
  if(e.target.closest('[data-imgup]')){const prev=sib(fig,'previousSibling');if(prev){prev.before(fig);syncBodyFromRich()}return}
@@ -711,6 +712,15 @@ $('imgViewer').addEventListener('click',()=>$('imgViewer').classList.remove('sho
 
 // ---- Resize pictures in a note: drag the corner handle, or ⤡ to cycle full / medium / small ----
 function imgPct(im){const v=Number(im?.pct);return v>=20&&v<=100?Math.round(v):100}
+function imgAlign(im){return im?.align==='Left'||im?.align==='Right'?im.align:''}
+// Float a picture left or right so the following lines of text sit beside it.
+function setImgAlign(fig,align){
+ const im=imageOf(fig);if(im)im.align=align;
+ fig.classList.toggle('alignLeft',align==='Left');fig.classList.toggle('alignRight',align==='Right');
+ if(align&&imgPct(im)>60)setImgPct(fig,45);
+ if(align){let next=fig.nextSibling;if(!next||next.nodeName!=='DIV'){const d=document.createElement('div');d.innerHTML='<br>';fig.after(d);next=d}placeCaretIn(next,true)}
+ toast(nt(align?'imgTextBeside':'imgFullLine'));
+}
 function imageOf(fig){return noteImages.find(im=>im.id===fig?.dataset.img)}
 function setImgPct(fig,pct){
  pct=Math.max(20,Math.min(100,Math.round(pct)));const im=imageOf(fig);if(im)im.pct=pct;
@@ -805,7 +815,7 @@ $('newCategory').addEventListener('click',async()=>{const name=await appPrompt(n
 $('themeToggle').addEventListener('click',()=>{window.meowThemeAutoOff?.();const dark=!document.body.classList.contains('dark');document.body.classList.toggle('dark',dark);safeStorage.setItem('note-dark',dark?'1':'0');$('themeToggle').textContent=dark?'☀️ ธีมสว่าง':'🌙 ธีมมืด';const cfg=JSON.parse(safeStorage.getItem('note-color-config')||'null')||colorPresets.lavender;const next={...cfg,bg:dark?'#211f29':'#fdf9ff',accent:dark?'#b8a5f2':cfg.accent,ink:dark?'#f2edf7':colorPresets.lavender.ink,notes:dark?colorPresets.night.notes:(cfg.notes||[]).every(c=>!isDarkHex(c))?cfg.notes:colorPresets.lavender.notes};applyColorConfig(next,true)});
 if(safeStorage.getItem('note-dark')==='1'){document.body.classList.add('dark');$('themeToggle').textContent='☀️ ธีมสว่าง'}
 $('exportTxt').addEventListener('click',()=>{const rows=notes.filter(n=>!n.deletedAt).map(n=>`${n.title||'ไม่มีชื่อ'}\n${n.category?'หมวดหมู่: '+n.category+'\n':''}${stripImageTokens(n.body,'[รูป]')}\n${(n.checklist||[]).map(x=>`${x.done?'[x]':'[ ]'} ${x.text}`).join('\n')}\n`).join('\n---\n\n');downloadText(rows,'note-export.txt','text/plain;charset=utf-8')});
-$('exportPdf').addEventListener('click',()=>{const printable=notes.filter(n=>!n.deletedAt);const html=(`<html><head><title>เหมียวไดอารี่ — ส่งออก</title><meta charset="utf-8"><style>body{font-family:system-ui,sans-serif;padding:28px;color:#302b37}article{break-inside:avoid;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:24px}h2{font-size:18px}pre{white-space:pre-wrap;font:inherit}</style></head><body><h1>เหมียวไดอารี่ — ส่งออก</h1>${printable.map(n=>`<article><h2>${esc(n.title||'ไม่มีชื่อ')}</h2><p>${esc(n.category||'')}</p><pre>${bodyToHtml(n)}</pre>${(n.checklist||[]).map(x=>`<p>${x.done?'☑':'☐'} ${esc(x.text)}</p>`).join('')}</article>`).join('')}<script>window.onload=()=>window.print()<\/script></body></html>`);if(window.MeowAndroid){window.MeowAndroid.printHtml(html);return}const w=window.open('','_blank');if(!w){toast('อนุญาตป๊อปอัปเพื่อส่งออก PDF');return}w.document.write(html);w.document.close()});
+$('exportPdf').addEventListener('click',()=>{const printable=notes.filter(n=>!n.deletedAt);const html=(`<html><head><title>เหมียวไดอารี่ — ส่งออก</title><meta charset="utf-8"><style>body{font-family:system-ui,sans-serif;padding:28px;color:#302b37}article{display:flow-root;break-inside:avoid;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:24px}h2{font-size:18px}pre{white-space:pre-wrap;font:inherit}</style></head><body><h1>เหมียวไดอารี่ — ส่งออก</h1>${printable.map(n=>`<article><h2>${esc(n.title||'ไม่มีชื่อ')}</h2><p>${esc(n.category||'')}</p><pre>${bodyToHtml(n)}</pre>${(n.checklist||[]).map(x=>`<p>${x.done?'☑':'☐'} ${esc(x.text)}</p>`).join('')}</article>`).join('')}<script>window.onload=()=>window.print()<\/script></body></html>`);if(window.MeowAndroid){window.MeowAndroid.printHtml(html);return}const w=window.open('','_blank');if(!w){toast('อนุญาตป๊อปอัปเพื่อส่งออก PDF');return}w.document.write(html);w.document.close()});
 function downloadText(content,name,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
 $('aiSummary').addEventListener('click',()=>{const text=stripImageTokens($('noteBody').value);if(!text){$('aiResult').textContent='เพิ่มเนื้อหาโน้ตก่อน';return}const sentences=text.split(/(?<=[.!?。！？\n])\s+/).filter(Boolean);const summary=sentences.length>3?sentences.slice(0,3).join(' '):text;$('aiResult').textContent='สรุป: '+summary;});
 
