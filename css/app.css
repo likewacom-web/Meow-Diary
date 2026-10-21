@@ -438,3 +438,14 @@ body.dark .appDialogBox input{background:#2c2837;border-color:#40374a}
 #notes.list [data-delete]{display:inline-grid;place-items:center;width:34px;height:30px;padding:0}
 .toast.hasAction{pointer-events:auto;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 15px}
 .toastBtn{border:0;border-radius:10px;background:#ffffff26;color:#ffd6e7;font-weight:800;padding:7px 12px;font-size:13px}
+
+/* LINE-style cat stickers */
+.inlineImg.sticker{background:transparent;border-radius:0;overflow:visible}
+.inlineImg.sticker img{max-height:none}
+.catStickerSheet h2{margin:4px 6px 12px;font-size:22px}
+.catStickerGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.catStickerGrid button{border:0;background:transparent;padding:4px;border-radius:16px;cursor:pointer}
+.catStickerGrid button:active,.catStickerGrid button:hover{background:var(--lav)}
+.catStickerGrid img{display:block;width:100%;height:auto;aspect-ratio:240/260}
+@media (min-width:600px){.catStickerGrid{grid-template-columns:repeat(4,110px);justify-content:center}}
+.noteThumb.sticker{object-fit:contain}

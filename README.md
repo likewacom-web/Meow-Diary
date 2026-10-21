@@ -15,6 +15,7 @@
 | `js/app.js` | การทำงานของแอป (Firebase, โน้ต, น้องแมว ฯลฯ) |
 | `js/i18n.js` | ข้อความภาษาไทย / อังกฤษ |
 | `sw.js` | Service worker ให้เปิดแอปได้แบบออฟไลน์ |
+| `stickers/` | สติกเกอร์แมวแบบ LINE (สร้างใหม่ได้ด้วย `tools/make-stickers.js`) |
 | `privacy.html` | นโยบายความเป็นส่วนตัวและวิธีลบบัญชี |
 | `android/` | แอป Android (WebView + ล็อกอิน Google แบบแอป) ดู `android/README.md` |
 
