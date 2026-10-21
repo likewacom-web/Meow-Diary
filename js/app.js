@@ -33,7 +33,7 @@ window.meowHandleBack=()=>{
  const dlg=document.querySelector('.appDialog [data-v="0"]');if(dlg){dlg.click();return true}
  const shown=sel=>document.querySelector(sel+'.show');
  if(shown('#imgViewer')){$('imgViewer').classList.remove('show');return true}
- for(const id of ['addSheet','templateSheet','menuSheet'])if(shown('#'+id)){closeSheet(id);return true}
+ for(const id of ['addSheet','templateSheet','catStickerSheet','menuSheet'])if(shown('#'+id)){closeSheet(id);return true}
  if(shown('#overlay')){closeEditor();return true}
  for(const sel of ['#aiOverlay','#languageOverlay','#settingsOverlay','.calendarModal']){const el=shown(sel);if(el){el.classList.remove('show');document.body.style.overflow='';return true}}
  if(!$('petView').hidden){showTab('notes');return true}
@@ -210,7 +210,7 @@ function render(){
  }).sort((a,b)=>Number(!!(b.pinned||b.favorite))-Number(!!(a.pinned||a.favorite))||noteSorters[sortBy](a,b));
  updateFilterTag();afterNotesChanged();
  $('count').textContent=`${list.length} ${language==='th'?'บันทึก':'notes'}`;
- $('notes').innerHTML=list.length?list.map(n=>`<article class="note ${n.deletedAt?'deleted':''}" style="--c:${colors[n.colorIndex]||colors[0]};background:var(--c)" data-open="${esc(n.id)}" tabindex="0" role="button">${n.images?.length?`<img class="noteThumb" src="${esc(n.images[0].src)}" alt="" loading="lazy">`:''}<div class="notehead"><div class="notetitle">${esc(n.title||tr('noTitle'))}</div>${n.pinned||n.favorite?'<span>📌</span>':''}</div><div class="preview">${n.kind==='checklist'||(!n.body&&n.checklist?.length)?esc((n.checklist||[]).slice(0,4).map(x=>(x.done?'☑ ':'☐ ')+x.text).join('\n')||tr('noContent')):esc(stripImageTokens(n.body)||tr('noContent'))}</div><div class="noteMeta">${n.category?`<span class="metaPill">▣ ${esc(n.category)}</span>`:''}${n.checklist?.length?`<span class="metaPill">☑ ${n.checklist.filter(x=>x.done).length}/${n.checklist.length}</span>`:''}${n.images?.length>1?`<span class="metaPill">🖼️ ${n.images.length}</span>`:''}${n.attachments?.length?`<span class="metaPill">📎 ${n.attachments.length}</span>`:''}${n.reminderAt?`<span class="metaPill">⏰ ${esc(new Date(n.reminderAt).toLocaleString())}${n.reminderRepeat?' 🔁':''}</span>`:''}</div><div class="notefoot"><time>${dateLabel(n.updatedAt)}</time>${n.deletedAt?`<button class="iconbtn" data-restore="${esc(n.id)}" aria-label="กู้คืน">↶</button><button class="iconbtn" data-purge="${esc(n.id)}" aria-label="ลบถาวร">×</button>`:`<button class="iconbtn" data-pin="${esc(n.id)}" aria-label="ปักหมุด">${n.pinned?'📌':'📍'}</button><button class="iconbtn" data-delete="${esc(n.id)}" aria-label="ย้ายลงถังขยะ" title="ลบ">🗑️</button>`}</div></article>`).join(''):`<div class="empty"><div style="font-size:45px">📝</div><div>${q?tr('notFound'):filter==='trash'?'ถังขยะว่าง':tr('emptyTitle')}</div><small>${q?tr('trySearch'):tr('emptyHint')}</small></div>`;
+ $('notes').innerHTML=list.length?list.map(n=>`<article class="note ${n.deletedAt?'deleted':''}" style="--c:${colors[n.colorIndex]||colors[0]};background:var(--c)" data-open="${esc(n.id)}" tabindex="0" role="button">${n.images?.length?`<img class="noteThumb${n.images[0].sticker?' sticker':''}" src="${esc(n.images[0].src)}" alt="" loading="lazy">`:''}<div class="notehead"><div class="notetitle">${esc(n.title||tr('noTitle'))}</div>${n.pinned||n.favorite?'<span>📌</span>':''}</div><div class="preview">${n.kind==='checklist'||(!n.body&&n.checklist?.length)?esc((n.checklist||[]).slice(0,4).map(x=>(x.done?'☑ ':'☐ ')+x.text).join('\n')||tr('noContent')):esc(stripImageTokens(n.body)||tr('noContent'))}</div><div class="noteMeta">${n.category?`<span class="metaPill">▣ ${esc(n.category)}</span>`:''}${n.checklist?.length?`<span class="metaPill">☑ ${n.checklist.filter(x=>x.done).length}/${n.checklist.length}</span>`:''}${n.images?.length>1?`<span class="metaPill">🖼️ ${n.images.length}</span>`:''}${n.attachments?.length?`<span class="metaPill">📎 ${n.attachments.length}</span>`:''}${n.reminderAt?`<span class="metaPill">⏰ ${esc(new Date(n.reminderAt).toLocaleString())}${n.reminderRepeat?' 🔁':''}</span>`:''}</div><div class="notefoot"><time>${dateLabel(n.updatedAt)}</time>${n.deletedAt?`<button class="iconbtn" data-restore="${esc(n.id)}" aria-label="กู้คืน">↶</button><button class="iconbtn" data-purge="${esc(n.id)}" aria-label="ลบถาวร">×</button>`:`<button class="iconbtn" data-pin="${esc(n.id)}" aria-label="ปักหมุด">${n.pinned?'📌':'📍'}</button><button class="iconbtn" data-delete="${esc(n.id)}" aria-label="ย้ายลงถังขยะ" title="ลบ">🗑️</button>`}</div></article>`).join(''):`<div class="empty"><div style="font-size:45px">📝</div><div>${q?tr('notFound'):filter==='trash'?'ถังขยะว่าง':tr('emptyTitle')}</div><small>${q?tr('trySearch'):tr('emptyHint')}</small></div>`;
 }
 function watchNotes(){
  if(unsubscribeNotes)unsubscribeNotes();
@@ -326,7 +326,7 @@ applyViewMode();applyNavLanguage();
 var noteKind='text',nextNoteKind='text';
 function setNoteKind(kind){
  noteKind=kind==='checklist'?'checklist':'text';const list=noteKind==='checklist';
- $('checkMain').hidden=!list;$('noteRich').hidden=list;$('addImage').hidden=list;$('takePhoto').hidden=list;$('checklistSection').hidden=list||!checkItems.length;
+ $('checkMain').hidden=!list;$('noteRich').hidden=list;$('addImage').hidden=list;$('takePhoto').hidden=list;$('addCatSticker').hidden=list;$('checklistSection').hidden=list||!checkItems.length;
  $('kindToggle').textContent=list?nt('toText'):nt('toChecklist');
  if(list)drawCheckMain();
 }
@@ -612,7 +612,8 @@ $('noteReminder').addEventListener('change',()=>{if($('noteReminder').value)try{
 const IMAGE_BUDGET=780000;
 const IMG_LINE=/^\[\[img:([\w-]+)\]\]$/;
 function stripImageTokens(t,repl=''){t=String(t||'');return (repl?t.replace(/\[\[img:[\w-]+\]\]/g,repl):t.replace(/^\[\[img:[\w-]+\]\]$\n?/gm,'')).trim()}
-function bodyToHtml(n){const byId=new Map((n.images||[]).map(im=>[im.id,im]));return String(n.body||'').split('\n').map(l=>{const m=l.match(IMG_LINE);return m&&byId.has(m[1])?`<img src="${esc(byId.get(m[1]).src)}" style="width:${imgPct(byId.get(m[1]))}%;max-width:100%;border-radius:8px;${imgAlign(byId.get(m[1]))==='Left'?'float:left;margin:4px 14px 8px 0':imgAlign(byId.get(m[1]))==='Right'?'float:right;margin:4px 0 8px 14px':'margin:6px 0;display:block'}">`:esc(l)}).join('\n')}
+function bodyToHtml(n){const byId=new Map((n.images||[]).map(im=>[im.id,im]));return String(n.body||'').split('\n').map(l=>{const m=l.match(IMG_LINE);return m&&byId.has(m[1])?`<img src="${esc(imgUrl(byId.get(m[1]).src))}" style="width:${imgPct(byId.get(m[1]))}%;max-width:100%;${byId.get(m[1]).sticker?'':'border-radius:8px;'}${imgAlign(byId.get(m[1]))==='Left'?'float:left;margin:4px 14px 8px 0':imgAlign(byId.get(m[1]))==='Right'?'float:right;margin:4px 0 8px 14px':'margin:6px 0;display:block'}">`:esc(l)}).join('\n')}
+function imgUrl(src){return /^stickers\/[\w-]+\.png$/.test(src)?new URL(src,location.href).href:src}
 function persistLocalNotes(list){
  const json=JSON.stringify(list);
  try{localStorage.setItem('meow-local-notes',json);return localStorage.getItem('meow-local-notes').length===json.length}
@@ -634,7 +635,7 @@ const taValue=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'val
 let syncingRich=false,savedRange=null;
 // Code elsewhere (templates, AI) writes noteBody.value; mirror those writes into the editor.
 Object.defineProperty(bodyEl,'value',{configurable:true,get(){return taValue.get.call(bodyEl)},set(v){taValue.set.call(bodyEl,v);if(!syncingRich)renderRich()}});
-function figureHtml(im){const pct=imgPct(im),al=imgAlign(im);return `<figure class="inlineImg${pct<55?' small':''}${al?' align'+al:''}" contenteditable="false" data-img="${esc(im.id)}" style="width:${pct}%"><img src="${esc(im.src)}" alt=""><span class="imgResize" data-imgresize aria-label="ลากเพื่อย่อหรือขยายรูป" title="ลากเพื่อย่อ/ขยาย"></span><span class="imgTools"><button type="button" data-imgalign aria-label="วางข้อความข้างรูป" title="ข้อความข้างรูป">⇆</button><button type="button" data-imgsize aria-label="เปลี่ยนขนาดรูป" title="ขนาด">⤡</button><button type="button" data-imgup aria-label="ย้ายขึ้น">↑</button><button type="button" data-imgdown aria-label="ย้ายลง">↓</button><button type="button" data-imgremove aria-label="ลบรูป">×</button></span></figure>`}
+function figureHtml(im){const pct=imgPct(im),al=imgAlign(im);return `<figure class="inlineImg${im.sticker?' sticker':''}${pct<55?' small':''}${al?' align'+al:''}" contenteditable="false" data-img="${esc(im.id)}" style="width:${pct}%"><img src="${esc(im.src)}" alt=""><span class="imgResize" data-imgresize aria-label="ลากเพื่อย่อหรือขยายรูป" title="ลากเพื่อย่อ/ขยาย"></span><span class="imgTools"><button type="button" data-imgalign aria-label="วางข้อความข้างรูป" title="ข้อความข้างรูป">⇆</button><button type="button" data-imgsize aria-label="เปลี่ยนขนาดรูป" title="ขนาด">⤡</button><button type="button" data-imgup aria-label="ย้ายขึ้น">↑</button><button type="button" data-imgdown aria-label="ย้ายลง">↓</button><button type="button" data-imgremove aria-label="ลบรูป">×</button></span></figure>`}
 function renderRich(){
  noteImages.forEach(im=>{if(!im.id)im.id=Math.random().toString(36).slice(2,10)});
  const text=taValue.get.call(bodyEl),byId=new Map(noteImages.map(im=>[im.id,im])),used=new Set();
@@ -720,6 +721,18 @@ $('addImage').addEventListener('click',()=>$('imagePick').click());
 $('takePhoto').addEventListener('click',()=>$('cameraPick').click());
 for(const id of ['imagePick','cameraPick'])$(id).addEventListener('change',async e=>{await addImageFiles(e.target.files||[]);e.target.value=''});
 $('imgViewer').addEventListener('click',()=>$('imgViewer').classList.remove('show'));
+
+// ---- LINE-style cat stickers: small transparent pictures shipped with the app ----
+// A sticker is stored like any picture but points at stickers/<name>.png instead of
+// holding image data, so it costs almost nothing in the note.
+const CAT_STICKERS=[['hello','สวัสดี','Hello'],['thanks','ขอบคุณ','Thanks'],['love','รักนะ','Love you'],['goodnight','ฝันดี','Good night'],['ok','โอเค','OK'],['hungry','หิวแล้ว','Hungry'],['tired','เหนื่อย','Tired'],['cry','ร้องไห้','Crying'],['angry','โกรธแล้ว','Angry'],['wow','ว้าว!','Wow'],['fight','สู้ๆ','You got this'],['confused','งงอะ','Confused'],['lol','555+','LOL'],['sorry','ขอโทษน้า','Sorry'],['yay','เย้!','Yay'],['miss','คิดถึงนะ','Miss you']];
+$('catStickerList').innerHTML=CAT_STICKERS.map(([k,th,en])=>`<button type="button" data-catsticker="${k}" aria-label="${th} / ${en}" title="${th}"><img src="stickers/${k}.png" alt="${th}" loading="lazy"></button>`).join('');
+$('addCatSticker').addEventListener('click',()=>openSheet('catStickerSheet'));
+$('catStickerSheet').addEventListener('click',e=>{
+ const b=e.target.closest('[data-catsticker]');if(!b)return;closeSheet('catStickerSheet');
+ const im={id:Math.random().toString(36).slice(2,10),src:`stickers/${b.dataset.catsticker}.png`,w:240,h:260,pct:40,sticker:true};
+ noteImages.push(im);insertFigure(im);
+});
 
 
 // ---- Resize pictures in a note: drag the corner handle, or ⤡ to cycle full / medium / small ----

@@ -98,6 +98,9 @@
 <div class="sheetOverlay" id="templateSheet" role="dialog" aria-modal="true" aria-labelledby="templateSheetTitle"><section class="sheet addSheet">
  <h2 id="templateSheetTitle">✨ แม่แบบ</h2><div id="templateList"></div>
 </section></div>
+<div class="sheetOverlay" id="catStickerSheet" role="dialog" aria-modal="true" aria-labelledby="catStickerTitle"><section class="sheet catStickerSheet">
+ <h2 id="catStickerTitle">😺 <span data-nav="catSticker">สติกเกอร์</span></h2><div class="catStickerGrid" id="catStickerList"></div>
+</section></div>
 <div class="sheetOverlay" id="menuSheet" role="dialog" aria-modal="true" aria-label="Menu"><section class="sheet menuSheet">
 <div class="sheetGrip"></div>
 <section class="account"><div class="avatar" id="avatar">N</div><div class="accountcopy"><strong id="accountTitle" data-i18n="connectGoogle">เชื่อมต่อบัญชี Google</strong><small id="accountHint" data-i18n="signInSync">เข้าสู่ระบบเพื่อซิงก์โน้ตของคุณ</small></div><button class="gbtn" id="googleSignIn"><span class="gmark">G</span><span data-i18n="signIn">เข้าสู่ระบบ</span></button><button class="outbtn" id="googleSignOut" hidden>ออกจากระบบ</button></section>
@@ -199,7 +202,7 @@
 <div class="checkMain" id="checkMain" hidden></div>
 <div class="fieldbody richBody" id="noteRich" contenteditable="true" role="textbox" aria-multiline="true" aria-label="เนื้อหาโน้ต"></div>
 <textarea class="fieldbody" hidden id="noteBody" placeholder="เขียนสิ่งที่คุณคิดไว้ที่นี่..." aria-label="เนื้อหาโน้ต" data-i18n-placeholder="bodyPlaceholder"></textarea>
-<div class="imageActions" id="imageActions"><button type="button" id="addImage">🖼️ <span data-nav="addImage">เพิ่มรูป</span></button><button type="button" id="takePhoto">📷 <span data-nav="takePhoto">ถ่ายรูป</span></button><button type="button" id="dictate">🎤 <span data-nav="dictate">พูดพิมพ์</span></button><span id="imageStatus" role="status"></span></div>
+<div class="imageActions" id="imageActions"><button type="button" id="addImage">🖼️ <span data-nav="addImage">เพิ่มรูป</span></button><button type="button" id="takePhoto">📷 <span data-nav="takePhoto">ถ่ายรูป</span></button><button type="button" id="addCatSticker">😺 <span data-nav="catSticker">สติกเกอร์</span></button><button type="button" id="dictate">🎤 <span data-nav="dictate">พูดพิมพ์</span></button><span id="imageStatus" role="status"></span></div>
 <input id="imagePick" type="file" accept="image/*" multiple hidden><input id="cameraPick" type="file" accept="image/*" capture="environment" hidden>
 <div class="label" data-i18n="noteColor">สีของโน้ต</div><div class="colors" id="colors"><button class="swatch selected" style="background:var(--lav)" data-color="0" aria-label="สีม่วง"></button><button class="swatch" style="background:var(--mint)" data-color="1" aria-label="สีเขียว"></button><button class="swatch" style="background:var(--peach)" data-color="2" aria-label="สีพีช"></button><button class="swatch" style="background:var(--yellow)" data-color="3" aria-label="สีเหลือง"></button><button class="swatch" style="background:var(--pink)" data-color="4" aria-label="สีชมพู"></button></div>
 <div class="editorTools">
