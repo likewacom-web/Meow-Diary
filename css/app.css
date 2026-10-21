@@ -449,3 +449,28 @@ body.dark .appDialogBox input{background:#2c2837;border-color:#40374a}
 .catStickerGrid img{display:block;width:100%;height:auto;aspect-ratio:240/260}
 @media (min-width:600px){.catStickerGrid{grid-template-columns:repeat(4,110px);justify-content:center}}
 .noteThumb.sticker{object-fit:contain}
+
+/* Pet cat: chibi style matching the stickers, with moods */
+.petAvatar{background:radial-gradient(circle at 50% 35%,#fffafd 0,#fde9f3 55%,#efe6ff 100%)}
+body.dark .petAvatar{background:radial-gradient(circle at 50% 35%,#55476b 0,#3d3350 60%,#332b44 100%)}
+.petCatSvg{filter:drop-shadow(0 3px 4px #5b4a7a26)}
+.petCatSvg .catTail{transform-box:fill-box;transform-origin:0% 95%;animation:catTail 1.8s ease-in-out infinite}
+.petCatSvg .catHead{transform-origin:60px 70px;transform-box:view-box}
+.petCatSvg .catBow{transform-origin:60px 76px}
+.petCatSvg .catEyesHappy,.petCatSvg .catEyesSleep,.petCatSvg .catSadBrow,.petCatSvg .catTear,.petCatSvg .catMouthOpen,.petCatSvg .catZzz,.petCatSvg .catHearts,.petCatSvg .catFish,.petCatSvg .catMouthSad{display:none}
+.pet-sad .catSadBrow,.pet-sad .catTear,.pet-sad .catMouthSad{display:inline}.pet-sad .catMouth{display:none}
+.pet-sad .catEar{animation:none;transform:rotate(-10deg)}
+.pet-sad .catEar+.catEar{transform:rotate(10deg)}
+.pet-hungry .catFish{display:inline;animation:petBob 1.6s ease-in-out infinite}
+.pet-happy .catEyesOpen,.pet-sleep .catEyesOpen,.pet-happy .catMouth,.pet-happy .catSadBrow,.pet-happy .catTear,.pet-sleep .catSadBrow,.pet-sleep .catTear,.pet-happy .catFish,.pet-sleep .catFish,.pet-happy .catMouthSad,.pet-sleep .catMouthSad{display:none}
+.pet-sleep.pet-sad .catMouth{display:inline}
+.pet-happy .catEyesHappy,.pet-happy .catMouthOpen,.pet-sleep .catEyesSleep{display:inline}
+.pet-happy .catHearts{display:inline;animation:petFloat 1.2s ease-out infinite}
+.pet-happy .petCatSvg{animation:petHop .5s ease-in-out 2}
+.pet-sleep .catZzz{display:inline;animation:petFloat 2s ease-in-out infinite}
+.pet-sleep .catTail,.pet-sleep .catLegFrontL,.pet-sleep .catLegFrontR,.pet-sleep .catEar{animation-play-state:paused}
+.petAvatar{cursor:pointer;-webkit-tap-highlight-color:transparent}
+@keyframes petFloat{0%{transform:translateY(3px);opacity:.3}50%{opacity:1}100%{transform:translateY(-4px);opacity:0}}
+@keyframes petBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes petHop{0%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}}
+.petCatSvg{max-width:none!important}.petScene{padding:4px 2px 2px}
